@@ -1,0 +1,44 @@
+1: {'Gaussian_component': 0.31768707, 'Center': 376.844238, 'FWHM': 3.53577898, 'Intensity': 1.05666602, 'Integrated Intensity': 5.228376478799722}
+
+Fit Report:
+[[Fit Statistics]]
+    # fitting method   = least_squares
+    # function evals   = 45
+    # data points      = 429
+    # variables        = 4
+    chi-square         = 0.06682985
+    reduced chi-square = 1.5725e-04
+    Akaike info crit   = -3753.06974
+    Bayesian info crit = -3736.82392
+[[Variables]]
+    Peak_1_Gaussian_component:  0.31768707 +/- 0.03767220 (11.86%) (init = 0.5)
+    Peak_1_Center:              376.844238 +/- 0.01388034 (0.00%) (init = 375.7492)
+    Peak_1_FWHM:                3.53577898 +/- 0.05814951 (1.64%) (init = 5)
+    Peak_1_Intensity:           1.05666602 +/- 0.01240098 (1.17%) (init = 0.6772894)
+[[Correlations]] (unreported correlations are < 0.100)
+    C(Peak_1_FWHM, Peak_1_Intensity)               = -0.8302
+    C(Peak_1_Gaussian_component, Peak_1_FWHM)      = +0.6665
+    C(Peak_1_Gaussian_component, Peak_1_Intensity) = -0.4997
+    C(Peak_1_Center, Peak_1_FWHM)                  = +0.2198
+    C(Peak_1_Gaussian_component, Peak_1_Center)    = +0.1728
+    C(Peak_1_Center, Peak_1_Intensity)             = -0.1632
+
+Postprocesed ratios between peak parameters:
+Gaussian_component:
+
+P1
+1.000
+
+
+
+
+Center:
+
+FWHM:
+
+Intensity:
+
+Integrated Intensity:
+
+
+
