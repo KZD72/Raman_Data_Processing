@@ -379,27 +379,28 @@ def fit_piecewise_spline_with_interpolation(x, y, ignore_regions):
 def baseline_arPLS(y, ratio=1e-6, lam=1e5, niter=1000, full_output=False):
     """
     Perform asymmetrically reweighted penalized least squares (arPLS) baseline correction on a given spectrum.
+    Sung-June Baek, Aaron Park, Young-Jin Ahna and Jaebum Choo: "Baseline correction using asymmetrically reweighted penalized least squares smoothing", Analyst, 2015,140, 250-257
     Here's how it works:
 
-Initially, the algorithm assumes that the input spectrum y consists of both the baseline and the peaks.
-
-In each iteration, the algorithm estimates the baseline z by solving a linear system (W + H)z = Wy, where W is the weight matrix and H is the smoothing matrix. This estimation of the baseline is based on the current weights assigned to the data points.
-
-Once the baseline z is estimated, the algorithm calculates the residuals d by subtracting the estimated baseline from the input spectrum: d = y - z.
-
-The residuals represent the deviations from the estimated baseline. If a point in the spectrum corresponds to a peak or feature, its value in the residuals would be significantly different from zero, as it deviates from the estimated baseline.
-
-The algorithm focuses on the negative residuals dn, which are the points in the residuals that fall below the estimated baseline. These negative residuals are likely to correspond to the peaks in the original spectrum.
-
-The algorithm calculates the mean m and standard deviation s of the negative residuals dn. These statistical measures provide information about the magnitude and distribution of the peaks in relation to the baseline.
-
-Based on the exponential decay weighting scheme, the algorithm assigns new weights w_new to the data points. The calculation of the weights depends on the values of the residuals d, the mean m, and the standard deviation s. The idea is that points with large negative residuals (corresponding to peaks) receive smaller weights, while points closer to the baseline receive higher weights.
-
-The convergence criterion is computed based on the difference between the new weights w_new and the previous weights w. If the weights change negligibly, it indicates that the algorithm has successfully captured the baseline and is effectively ignoring the peaks.
-
-By updating the weights in each iteration, the algorithm gradually adapts to the presence of the peaks and assigns lower weights to those data points, effectively ignoring their influence on the estimated baseline.
-
-The iterative process continues until the convergence criterion falls below a specified threshold or the maximum number of iterations is reached. At this point, the estimated baseline represents the smooth trend of the spectrum, excluding the peaks or features.
+    Initially, the algorithm assumes that the input spectrum y consists of both the baseline and the peaks.
+    
+    In each iteration, the algorithm estimates the baseline z by solving a linear system (W + H)z = Wy, where W is the weight matrix and H is the smoothing matrix. This estimation of the baseline is based on the current weights assigned to the data points.
+    
+    Once the baseline z is estimated, the algorithm calculates the residuals d by subtracting the estimated baseline from the input spectrum: d = y - z.
+    
+    The residuals represent the deviations from the estimated baseline. If a point in the spectrum corresponds to a peak or feature, its value in the residuals would be significantly different from zero, as it deviates from the estimated baseline.
+    
+    The algorithm focuses on the negative residuals dn, which are the points in the residuals that fall below the estimated baseline. These negative residuals are likely to correspond to the peaks in the original spectrum.
+    
+    The algorithm calculates the mean m and standard deviation s of the negative residuals dn. These statistical measures provide information about the magnitude and distribution of the peaks in relation to the baseline.
+    
+    Based on the exponential decay weighting scheme, the algorithm assigns new weights w_new to the data points. The calculation of the weights depends on the values of the residuals d, the mean m, and the standard deviation s. The idea is that points with large negative residuals (corresponding to peaks) receive smaller weights, while points closer to the baseline receive higher weights.
+    
+    The convergence criterion is computed based on the difference between the new weights w_new and the previous weights w. If the weights change negligibly, it indicates that the algorithm has successfully captured the baseline and is effectively ignoring the peaks.
+    
+    By updating the weights in each iteration, the algorithm gradually adapts to the presence of the peaks and assigns lower weights to those data points, effectively ignoring their influence on the estimated baseline.
+    
+    The iterative process continues until the convergence criterion falls below a specified threshold or the maximum number of iterations is reached. At this point, the estimated baseline represents the smooth trend of the spectrum, excluding the peaks or features.
 
     Parameters:
         y (ndarray): The input spectrum.
