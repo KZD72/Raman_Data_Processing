@@ -28,11 +28,14 @@ import tkinter as tk
 from tkinter import ttk, filedialog
 from tkinter import messagebox
 import os
+from tqdm import tqdm
+import time
 
 from bin import Raman_dataloader
 from bin import Raman_datahandling
 from bin import Raman_plot
 from bin import Raman_single_peak_fit_GUI  # Import the FDTR_plot module for data plotting
+from bin import Raman_single_peak_fit_dashboard
 
 
 def error(type):
@@ -327,6 +330,8 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
     global bas_man_points, point_baseline
     global valid_files, normalise_check
     global baseline_type
+    global dict_container
+    global new_peak_entry
 
     raw_dat = raw_dat_a
     x_raw = raw_dat[:, 0]
@@ -348,6 +353,7 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
     valid_files = []
     normalise_check = False
     baseline_type = "Auto"
+    dict_container={}
 
     # Internal functions to clickbutton
 
@@ -376,6 +382,7 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
 
                 button_substract_baseline.config(state="disabled")
                 button_peak_detection.config(state="disabled")
+                button_manual_peak_adding.config(state="disabled")
                 button_peak_processing.config(state="disabled")
                 button_load_batch_folder.config(state="disabled")
                 button_batch.config(state="disabled")
@@ -412,9 +419,11 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
             baseline_type = "Auto"
             button_substract_baseline.config(state="normal")
             button_peak_detection.config(state="disabled")
+            button_manual_peak_adding.config(state="disabled")
             button_peak_processing.config(state="disabled")
             button_load_batch_folder.config(state="disabled")
             button_batch.config(state="disabled")
+            button_dashboard.config(state="disabled")
 
     def update_baseline(raw_x, raw_y, bas_man_points, model_type, silent=True):
         global x_baseline, y_baseline
@@ -513,9 +522,11 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
                                 model_type, silent)
                 button_substract_baseline.config(state="normal")
                 button_peak_detection.config(state="disabled")
+                button_manual_peak_adding.config(state="disabled")
                 button_peak_processing.config(state="disabled")
                 button_load_batch_folder.config(state="disabled")
                 button_batch.config(state="disabled")
+                button_dashboard.config(state="disabled")
             else:
                 gen_error(
                     f"Point out of data range [{spectral_window[0]}-{spectral_window[1]}]")
@@ -545,9 +556,12 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
             update_baseline(raw_x, raw_y, bas_man_points, 'linear')
             button_substract_baseline.config(state="disabled")
             button_peak_detection.config(state="disabled")
+            button_manual_peak_adding.config(state="disabled")
             button_peak_processing.config(state="disabled")
             button_load_batch_folder.config(state="disabled")
             button_batch.config(state="disabled")
+            button_dashboard.config(state="disabled")
+            
 
     def button_add_baseline():
         # Prompt user to select a file from disk
@@ -603,9 +617,11 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
 
         button_substract_baseline.config(state="normal")
         button_peak_detection.config(state="disabled")
+        button_manual_peak_adding.config(state="disabled")
         button_peak_processing.config(state="disabled")
         button_load_batch_folder.config(state="disabled")
         button_batch.config(state="disabled")
+        button_dashboard.config(state="disabled")
 
     def button_save_baseline():
         global x_baseline, y_baseline, bas_man_points
@@ -649,10 +665,12 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
                                          )
             Raman_plot.update_plot(canvas, canvas_panel, fig, ax, dat)
         button_peak_detection.config(state="normal")
+        button_manual_peak_adding.config(state="normal")
         button_peak_processing.config(state="disabled")
         button_normalise.config(state="normal")
         button_load_batch_folder.config(state="disabled")
         button_batch.config(state="disabled")
+        button_dashboard.config(state="disabled")
 
     def button_normalise_clicked(silent=True):
         global x_baseline, y_baseline, info, normalise_check
@@ -680,6 +698,8 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
 
     def button_peak_detection_clicked(silent=True):
         global x_baseline, y_baseline, info, peaks, peak_value, peak_val, smoothing_window, peak_sep, peak_promi, peak_number_control
+
+       
         c1 = check_peak(field_peaks.get())
         c2 = check_smoothing(field_smooth_window.get(), len(x_baseline))
         c3 = check_smoothing(field_sep.get(), len(x_baseline))
@@ -729,8 +749,83 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
             button_peak_adding.config(state="normal")
             button_load_batch_folder.config(state="normal")
             button_batch.config(state="disabled")
+    
+    
+    def add_peak(new_peak):
+        """
+        This function adds a new peak to the global peak_val list and updates the plot.
+
+        Parameters:
+        new_peak: The new peak to be added. It should be a Tkinter StringVar object that contains a string representation of a float.
+
+        Returns:
+        None
+        """
+        # Access the global variables
+        global x_baseline, y_baseline, info, peak_val, peaks
+
+        # Check if the new peak is a number
+        c1 = check_number_f(new_peak.get())
+
+        if c1:
+            # Convert the new peak to a float
+            p = float(new_peak.get())
+
+            # Check if the new peak is within the range of x_baseline
+            c2 = p > x_baseline[0] and p < x_baseline[-1]
+
+            if c2:
+                # Convert peak_val to a NumPy array
+                np_peaks = np.asarray(peak_val)
+
+                # Check if np_peaks is not empty
+                if np_peaks.size:
+                    # Get the x values of the peaks
+                    x_peak = np_peaks[:, 0]
+
+                    # Check if the new peak is already in x_peak
+                    c3 = np.isin(p, x_peak)
+                else:
+                    c3 = False
+
+                # If the new peak is not already in x_peak
+                if not c3:
+                    # Find the index of the new peak in x_baseline
+                    index = np.searchsorted(np.asarray(x_baseline), p)
+
+                    # Add the new peak to peak_val and peaks
+                    peak_val.append([p, y_baseline[index]])
+                    peaks.append(index)
+
+                    # Reorder the peaks by y value in descending order
+                    sorted_indexes = sorted(range(len(peak_val)),
+                                            key=lambda i: peak_val[i][1],
+                                            reverse=True)
+                    peak_val = [peak_val[item] for item in sorted_indexes]
+                    peaks = [peaks[item] for item in sorted_indexes]
+
+                    # Update the plot
+                    arrow_data = [(peaks[item], peak_val[item][1]) for item in range(len(peak_val))]
+                    dat = [[x_baseline, y_baseline]]
+                    fig, ax = Raman_plot.plotter(dat,
+                                                    ["Wavenumber (1/cm)", "Intensity (A.U.)"],
+                                                    info['Title'],
+                                                    leyends=['Baseline_corrected'],
+                                                    lines=True,
+                                                    res=150,
+                                                    leyend_frame=[True, 'b'],
+                                                    arrow=arrow_data)
+                    Raman_plot.update_plot(canvas, canvas_panel, fig, ax, dat)
+
+                else:
+                    error(7)  # The new peak is already in peak_val
+            else:
+                error(7)  # The new peak is not within the range of x_baseline
+        else:
+            error(7)  # The new peak is not a number
 
     def button_adding_clicked():
+        # Access the global variables
         global x_baseline, y_baseline, info, peak_val, peaks
 
         # deactivate buttons
@@ -741,6 +836,8 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
         button_peak_processing.config(state="disabled")
         button_peak_adding.config(state="disabled")
         button_normalise.config(state="disabled")
+        button_batch.config(state="disabled")
+        button_dashboard.config(state="disabled")
 
         def on_closing():
             button_clipper.config(state="normal")
@@ -753,58 +850,8 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
             secondary_window.quit()
             secondary_window.destroy()
 
-        def add_peak():
-            global x_baseline, y_baseline, info, peak_val, peaks
-
-            c1 = check_number_f(new_peak.get())
-
-            if c1:
-                p = float(new_peak.get())
-                c2 = p > x_baseline[0] and p < x_baseline[-1]
-                if c2:
-                    np_peaks = np.asarray(peak_val)
-                    x_peak = np_peaks[:, 0]
-                    c3 = np.isin(p, x_peak)
-                    if not c3:
-
-                        index = np.searchsorted(np.asarray(x_baseline), p)
-                        peak_val.append([p, y_baseline[index]])
-                        peaks.append(index)
-                        # Reorder the peaks again:
-                        sorted_indexes = sorted(range(len(peak_val)),
-                                                key=lambda i: peak_val[i][1],
-                                                reverse=True)
-                        peak_val = [peak_val[item] for item in sorted_indexes]
-                        peaks = [peaks[item] for item in sorted_indexes]
-                        # Update the plot
-                        arrow_data = [(
-                            peaks[item],
-                            peak_val[item][1]
-                        ) for item in range(len(peak_val))
-                        ]
-                        dat = [[x_baseline, y_baseline]]
-                        fig, ax = Raman_plot.plotter(dat,
-                                                     ["Wavenumber (1/cm)",
-                                                      "Intensity (A.U.)"],
-                                                     info['Title'],
-                                                     leyends=[
-                                                         'Baseline_corrected'],
-                                                     lines=True,
-                                                     res=150,
-                                                     # size="double_size_double_heigh",
-                                                     leyend_frame=[True, 'b'],
-                                                     arrow=arrow_data
-                                                     )
-                        Raman_plot.update_plot(
-                            canvas, canvas_panel, fig, ax, dat)
-
-                    else:
-                        error(7)  # Change error type
-                else:
-                    error(7)  # Change error type
-            else:
-                error(7)  # Change error type
-            # check all the data consitency
+        def add_peak_local():
+            add_peak(new_peak)
 
         # Area to create the peak fittingwindow
         secondary_window = tk.Toplevel(main_window)
@@ -844,7 +891,7 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
         # add button to add peak
         # Create button
         button_peak_add = tk.Button(box_frame, text='Add peak',
-                                    command=add_peak
+                                    command=add_peak_local
                                     )
         button_peak_add.grid(row=0, column=2, padx=10, pady=2, sticky='nsew')
         # Create button
@@ -874,11 +921,14 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
         button_baseline.config(state="disabled")
         button_substract_baseline.config(state="disabled")
         button_peak_detection.config(state="disabled")
+        button_manual_peak_adding.config(state="disabled")
         button_peak_processing.config(state="disabled")
         button_peak_adding.config(state="disabled")
         button_normalise.config(state="disabled")
         button_load_batch_folder.config(state="disabled")
         button_batch.config(state="disabled")
+        button_dashboard.config(state="disabled")
+
 
         # Create window for fitting:
         # Area to create the peak fittingwindow
@@ -896,6 +946,31 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
         fit_window.protocol("WM_DELETE_WINDOW", on_closing)
         fit_window.mainloop()
 
+    def button_manual_adding_clicked():
+        global peak_val, peaks, new_peak_entry  
+        add_peak(new_peak_entry)
+
+    def clean_peaks(event):
+        global peak_val, peaks, x_baseline, y_baseline, info  
+
+        if len(peak_val)>0:
+            dat = [[x_baseline, y_baseline]]
+            fig, ax = Raman_plot.plotter(dat,
+                                            ["Wavenumber (1/cm)",
+                                            "Intensity (A.U.)"],
+                                            info['Title'],
+                                            leyends=[
+                                                'Baseline_corrected'],
+                                            lines=True,
+                                            res=150,
+                                            # size="double_size_double_heigh",
+                                            leyend_frame=[True, 'b'],                                        
+                                            )
+            Raman_plot.update_plot(
+                canvas, canvas_panel, fig, ax, dat)
+        peak_val=[]
+        peaks=[]
+
     def button_load_batch_folder():
         """
         Opens a file dialog to select and load the data file.
@@ -911,10 +986,24 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
         # Filter the list to only include .txt files
         txt_files = [f for f in files if f.endswith('.txt')]
 
+        # Create a new Tkinter window
+        root = tk.Tk()
+        root.title("Checking files Progress")
+           # Create a progress bar
+          # Create a label for the estimated time remaining
+        time_label = tk.Label(root, text="")
+        time_label.pack()
+        # Create a style for the progress bar
+        style = ttk.Style()
+        style.configure("TProgressbar", thickness=50)  # Adjust the thickness as needed
+        progress = ttk.Progressbar(root, length=250, mode='determinate', style="TProgressbar") 
+        progress.pack()
+
         # Valid data files
         valid_files = []
         numer_non_valid_files = 0
-        for file in txt_files:
+        for item, file in enumerate(txt_files):
+            start_time = time.time()
             try:
                 check = Raman_dataloader.load_spectra_data(
                     os.path.join(directory, file), data_type, silent=False)
@@ -924,24 +1013,53 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
                     numer_non_valid_files = numer_non_valid_files+1
             except:
                 numer_non_valid_files = numer_non_valid_files+1
+            
+            progress['value'] = (item+1) / len(txt_files) * 100
+            elapsed_time = time.time() - start_time
+            estimated_time = elapsed_time * (len(txt_files) - item)
+            
+            time_label['text'] = "{:.2f} % completed".format((item+1) / len(txt_files) * 100)+"\nEstimated time remaining:\n{:.2f} seconds".format(estimated_time)
+            root.update()
+            root.update_idletasks()
 
-        messagebox.showinfo(
-            "Information", f"{len(valid_files)} files valid to be processed,{numer_non_valid_files} files to be excluded")
+        # Close the Tkinter window once the loop is finished
+        root.destroy()
+        messagebox.showinfo("Information", f"{len(valid_files)} files valid to be processed,{numer_non_valid_files} files to be excluded", parent=main_window)
+
         if len(valid_files) > 0:
             button_batch.config(state="normal")
 
     def button_batch_proccesing():
-        global valid_files, normalise_check, raw_dat, info, bas_man_points, x_baseline, y_baseline
+        global valid_files, normalise_check, raw_dat, info, bas_man_points, x_baseline, y_baseline,dict_container
 
         new_x_baseline = [bas_man_points[i, 0]
                           for i in range(1, len(bas_man_points) - 1)]
+        
+        
+       
+        # Create a new Tkinter window
+        root2 = tk.Tk()
+        root2.title("Processing Progress")
+           # Create a progress bar
+          # Create a label for the estimated time remaining
+        time_label = tk.Label(root2, text="")
+        time_label.pack()
+        # Create a style for the progress bar
+        style = ttk.Style()
+        style.configure("TProgressbar", thickness=50)  # Adjust the thickness as needed
+        progress = ttk.Progressbar(root2, length=250, mode='determinate', style="TProgressbar") 
+        progress.pack()
 
-        for file in valid_files:
+        dict_container={}
+
+        for item,file in enumerate(valid_files):
+            
             raw_dat = Raman_dataloader.load_spectra_data(file, data_type)
             info = Raman_dataloader.load_spectra_info(file, data_type)
-            plotShow = True  # To not show the images
+            plotShow = False  # False To not show the images
+            start_time = time.time()
             if file == valid_files[-1]:
-                plotShow = True
+                plotShow = False
             try:
                 button_clipper_clicked(silent=False)
                 try:
@@ -958,8 +1076,8 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
                         index = [Raman_datahandling.wavenumber_to_index(
                             raw_x, point, res) for point in new_x_baseline]
 
-                        for item in index:
-                            insert_point = [raw_x[item], raw_y[item]]
+                        for element in index:
+                            insert_point = [raw_x[element], raw_y[element]]
                             insert_index = np.searchsorted(
                                 bas_man_points[:, 0], insert_point[0])
                             bas_man_points = np.insert(
@@ -976,8 +1094,17 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
                         try:
                             button_peak_detection_clicked(silent=False)
                             try:
-                                Raman_single_peak_fit_GUI.batch_fit(
-                                    canvas, canvas_panel, info, x_baseline, y_baseline, peak_val, file, plotShow)
+                                dict_container.update(Raman_single_peak_fit_GUI.batch_fit(
+                                    canvas, canvas_panel, info, x_baseline, y_baseline, peak_val, file, silent=plotShow)
+                                )
+                                progress['value'] = (item+1) / len(valid_files) * 100                               
+                                elapsed_time = time.time() - start_time                                
+                                estimated_time = elapsed_time * (len(valid_files) - item)                                
+                                time_label['text'] = "{:.2f} % completed".format((item+1) / len(valid_files) * 100)+"\nEstimated time remaining:\n{:.2f} seconds".format(estimated_time)
+                                
+                            
+                                root2.update()
+                                root2.update_idletasks()
                             except:
                                 messagebox.showinfo(
                                     "Error", f"{file} \nFit routine failed")
@@ -995,9 +1122,23 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
 
             except:
                 messagebox.showinfo("Error", f"{file} \nout of clipping range")
+            
+            
 
+        # Close the Tkinter window once the loop is finished
+        root2.destroy()
+        button_dashboard.config(state="normal")
+        
+
+    def dashboard():
+        global dict_container
+        dashboard_window = tk.Toplevel(main_window)
+        dashboard_window.title('Batch peak analizer dahsboard')
+        dashboard_window.geometry("755x900")
+        dashboard_window.resizable(False, False)  # Disable resizing
+        Raman_single_peak_fit_dashboard.create_dashboard(dashboard_window, canvas, canvas_panel, dict_container)
      ###########################################################################
-     ##### MAin laterla panel definition                                    ####
+     ##### Main laterla panel definition                                    ####
      ###########################################################################
 
     main_panel = tk.Frame(main_window, bg='white')
@@ -1055,13 +1196,8 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
     # Add elements to each subpanel
 
     # area to create the fields
-    label_fields = ttk.Label(
-        subpanel1,
-        text="Select the spectral range:",
-        anchor="center",
-        justify="center"
-    )
-    label_fields.config(font=("bold", 12))
+    label_fields =  tk.Label(subpanel1, text="Select the spectral range:")
+    label_fields.config(font=("bold", 14))
     label_fields.config(font=("underline"))
     # Create a bold and underlined font
 
@@ -1116,7 +1252,7 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
     box_frame_2.grid_columnconfigure(3, weight=1)
 
     label_baseline = tk.Label(subpanel2, text='Baseline Correction:')
-    label_baseline.config(font=("bold", 12))
+    label_baseline.config(font=("bold", 14))
     label_baseline.config(font=("underline"))
     label_baseline.grid(row=0, column=0, padx=10, pady=2, sticky='nsew')
 
@@ -1237,24 +1373,39 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
     box_frame_3.grid(row=1, column=0, padx=10, pady=2, sticky='nsew')
     # Configure column weights of the box_frame
     box_frame_3.grid_columnconfigure(0, weight=4)
-    box_frame_3.grid_columnconfigure(1, weight=2)
-    box_frame_3.grid_columnconfigure(3, weight=6)
+   
 
+           # Buttons subpanel2
+    peak_finding_tab = ttk.Notebook(box_frame_3)
+    peak_finding_tab.grid(row=0, column=0, padx=10, pady=2, sticky='nsew')
+    tab3 = ttk.Frame(peak_finding_tab)
+    tab4 = ttk.Frame(peak_finding_tab)
+    peak_finding_tab.add(tab3, text="Auto")
+    peak_finding_tab.add(tab4, text="Manual")
+    peak_finding_tab.bind("<<NotebookTabChanged>>", clean_peaks)
+    tab4.grid_columnconfigure(0, weight=4)
+    tab4.grid_columnconfigure(1, weight=2)
+    tab4.grid_columnconfigure(3, weight=6)
+    tab3.grid_columnconfigure(0, weight=4)
+
+    ###########################################################################
+    ##### Auto                                                             ####
+    ###########################################################################
     # First child frame
-    frame6 = ttk.Frame(box_frame_3, borderwidth=2, relief="groove")
-    frame6.grid(row=1, column=0, padx=10, pady=2, sticky='nsew')
-
+    frame6 = ttk.Frame(tab3, borderwidth=2, relief="groove")
+    frame6.grid(row=0, column=0, padx=10, pady=2, sticky='nsew')
+    
     # Second child frame
-    frame7 = ttk.Frame(box_frame_3, borderwidth=2, relief="groove")
-    frame7.grid(row=1, column=1, padx=10, pady=2, sticky='nsew')
+    frame7 = ttk.Frame(tab3, borderwidth=2, relief="groove")
+    frame7.grid(row=0, column=1, padx=10, pady=2, sticky='nsew')
 
     # third child frame
-    frame8 = ttk.Frame(box_frame_3, borderwidth=2, relief="groove")
-    frame8.grid(row=2, column=1, padx=10, pady=2, sticky='nsew')
+    frame8 = ttk.Frame(tab3, borderwidth=2, relief="groove")    
+    frame8.grid(row=1, column=1, padx=10, pady=2, sticky='nsew')
     # Buttons subpanel2
 
-    label_peaks = tk.Label(subpanel3, text='Peak detection and processing:')
-    label_peaks.config(font=("bold", 12))
+    label_peaks = tk.Label(subpanel3, text='Peak detection:')
+    label_peaks.config(font=("bold", 14))
     label_peaks.config(font=("underline"))
     label_peaks.grid(row=0, column=0, padx=10, pady=2, sticky='nsew')
 
@@ -1362,12 +1513,31 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
                                    state="disabled")
     button_peak_adding.grid(row=4, column=0, padx=10, pady=2, sticky='nsew')
 
+    ###########################################################################
+    ##### Manual                                                           ####
+    ###########################################################################
+
+
+    field_label_add_peak = ttk.Label(
+        tab4,
+        text="Peak position in 1/cm:",
+        anchor="center",
+        justify="center",
+        style="Box.TLabel"
+    )
+
+    field_label_add_peak.grid(
+        row=0, column=0, padx=5, pady=2, sticky='nsew')
+    new_peak_entry = ttk.Entry(tab4, justify='center')    
+    new_peak_entry.grid(row=1, column=0, padx=5, pady=2, sticky='nsew')
+
+    # add button to add peak
     # Create button
-    button_peak_processing = tk.Button(frame8, text='Peak fitting menu',
-                                       command=button_peak_analizer_clicked,
-                                       state="disabled")
-    button_peak_processing.grid(
-        row=0, column=0, padx=10, pady=2, sticky='nsew')
+    button_manual_peak_adding = tk.Button(tab4, text='Add peaks',
+                                command=button_manual_adding_clicked,
+                                state="disabled")
+    button_manual_peak_adding.grid(row=1, column=1, padx=10, pady=2, sticky='nsew')
+
 
     ###########################################################################
     ##### Sub panel 4                                                   ####
@@ -1377,35 +1547,61 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
     subpanel4.grid_rowconfigure(1, weight=1)  # Configure row weight
     subpanel4.grid_columnconfigure(0, weight=1)  # Configure column weight
 
-    field_batch_processing = ttk.Label(
-        subpanel4,
-        text="Batch processing of files in a folder",
-        background='light salmon',  # Set background to transparent
-        relief='solid',  # Add a frame
-        borderwidth=5  # Set frame width
-    )
-    field_batch_processing.grid(row=0, column=0, padx=5, pady=2, sticky='nsew')
-    field_batch_processing.config(font=("bold", 12))
-    field_batch_processing.config(font=("underline"))
+    box_frame_4 = ttk.Frame(subpanel4, borderwidth=1, relief="groove")
+    box_frame_4.grid(row=1, column=0, padx=10, pady=2, sticky='nsew')
+    # Configure column weights of the box_frame
+    box_frame_4.grid_columnconfigure(0, weight=1)
+    box_frame_4.grid_columnconfigure(1, weight=1)
 
     # First child frame
-    style_frame7 = ttk.Style()
-    style_frame7.configure('new.TFrame', background='light salmon')
-    frame7 = ttk.Frame(subpanel4, borderwidth=5,
-                       relief="solid", style='new.TFrame')
-    frame7.grid(row=0, column=3, padx=10, pady=2, sticky='nsew')
+    frame9 = ttk.Frame(box_frame_4, borderwidth=2, relief="groove")
+    frame9.grid(row=1, column=0, padx=10, pady=2, sticky='nsew')
+    frame9.grid_columnconfigure(0, weight=1)
+   
+    # subpanel4
 
-    # Create button
-    button_load_batch_folder = tk.Button(frame7, text='Load folder',
+    field_processing = tk.Label(subpanel4, text='Peak processing:')
+    field_processing.config(font=("bold", 14))
+    field_processing.config(font=("underline"))
+    field_processing.grid(row=0, column=0, padx=10, pady=2, sticky='nsew')
+
+      
+    # Buttons subpanel4
+    # Create a style
+   
+    style.configure('TNotebook.Tab', 
+                font=('Helvetica', 12, 'bold'))  # Bold font with size 18
+    fit_tab = ttk.Notebook(frame9)
+    fit_tab.grid(row=0, column=0, padx=10, pady=2, sticky='nsew')
+    tab5 = ttk.Frame(fit_tab)
+    tab6 = ttk.Frame(fit_tab)
+    fit_tab.add(tab5, text="Single peak processing")
+    fit_tab.add(tab6, text="Batch proceesing")
+    tab5.grid_columnconfigure(0, weight=1)
+    tab6.grid_columnconfigure(0, weight=1)
+    # Create button in tab 3
+ 
+    button_peak_processing = tk.Button(tab5, text='Peak fitting menu',
+                                       command=button_peak_analizer_clicked,
+                                       state="disabled")
+    button_peak_processing.grid(
+        row=0, column=0, padx=10, pady=2, sticky='e')
+    # Create button in tab 4
+    button_load_batch_folder = tk.Button(tab6, text='Load folder',
                                          command=button_load_batch_folder,
                                          state="disabled"
                                          )
     button_load_batch_folder.grid(
-        row=0, column=1, padx=10, pady=2, sticky='nsew')
+        row=0, column=0, padx=10, pady=2, sticky='nsew')
 
-    button_batch = tk.Button(frame7, text='Batch processing',
+    button_batch = tk.Button(tab6, text='Batch processing',
                              command=button_batch_proccesing,
                              state="disabled")
-    button_batch.grid(row=0, column=2, padx=10, pady=2, sticky='nsew')
+    button_batch.grid(row=0, column=1, padx=10, pady=2, sticky='e')
+
+    button_dashboard = tk.Button(tab6, text='Summary Dashboard',
+                             command=dashboard,
+                             state="disabled")
+    button_dashboard.grid(row=1, column=1, padx=10, pady=2, sticky='e')
 
     return main_panel
