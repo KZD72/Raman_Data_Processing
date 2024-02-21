@@ -27,7 +27,7 @@ This is a GUI to load and plot the data for a single peak analysis
 # Import FigureCanvasTkAgg class and NavigationToolbar2Tk from matplotlib
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import tkinter as tk  # Import the Tkinter module for GUI
-from tkinter import ttk, filedialog
+from tkinter import ttk, filedialog, font
 import numpy as np
 from tkinter import messagebox
 import matplotlib.pyplot as plt
@@ -220,15 +220,31 @@ def main(window_parent):
     combobox.set(options[0])
     model_data = combobox
     combobox.grid(row=0, column=1, padx=5, pady=5)
+    # Create style
+    # Create a style
+    style = ttk.Style(window)
+    style.configure('TButton', 
+                background='#ADD8E6', 
+                foreground='black',  # Black text color
+                font=('Helvetica', 18, 'bold'))  # Bold font 
 
     data_button = ttk.Button(
         master=button_panel,
-        command=open_file,
-        text="Load data")
+        command=open_file,        
+        text="Load data",
+        style='TButton')
     data_button.grid(row=0, column=2, padx=10, pady=5)
-
-    button_meta = ttk.Button(master=button_panel, text='Metadata',
-                             command=button_clicked, state="disabled")
+# Create a style
+    style = ttk.Style(window)
+    style.configure('TButton2.TButton', 
+                background='#ADD8E6', 
+                foreground='black',  # Black text color
+                font=('Helvetica', 14))  # Bold font 
+    button_meta = ttk.Button(master=button_panel, 
+                            text='Metadata',
+                            command=button_clicked,                            
+                            style='TButton2.TButton',
+                            state="disabled")
     button_meta.grid(row=0, column=3, padx=10, pady=5)
     # Remove the buttons from the window before using grid
 
