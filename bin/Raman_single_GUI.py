@@ -145,7 +145,7 @@ def main(window_parent):
         data_type = model_data.get()
 
         filepath = filedialog.askopenfilename(
-            filetypes=[("TXT Files", "*.txt")])
+            filetypes=[("TXT Files", "*.txt"), ("Dat Files","*.dat")])
 
         if filepath != '':
             # Call the buttonCall() function or perform any desired action
@@ -214,7 +214,7 @@ def main(window_parent):
     label_model = ttk.Label(button_panel, text="Select the data format:")
     label_model .grid(row=0, column=0, padx=5, pady=5)
 
-    options = ['Horiba', 'BWtech']
+    options = ['Horiba', 'B&Wtek', 'Brukker IR']
 
     combobox = ttk.Combobox(button_panel, values=options)
     combobox.set(options[0])

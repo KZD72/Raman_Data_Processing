@@ -82,22 +82,102 @@ def robust_float(value):
     result = ne.evaluate(value.replace(',', '.'))
     return result.item()
 
-def reorder_data(arr):
+def reorder_data(arr,multiple=False, transpose=False, squeeze=False):
     """
-    Reorders a 2D array based on the values in the first column in ascending order.
+    Reorders a 2D array based on the values in the first column in descending order.
 
     Parameters:
-    arr (numpy.ndarray): The input 2D array to be reordered.
+    arr (numpy.ndarray or list): The input 2D array to be reordered.
 
     Returns:
     numpy.ndarray: The reordered array where rows are sorted based on the values in the first column.
     """
-    # Get the indices that would sort the first column
-    sorted_indices = np.argsort(arr[:, 0])
+    # Convert arr to a NumPy array if it's not already
+    arr_inner = np.array(arr)
+  
+    if squeeze:
+        # Remove single-dimensional entries from the shape of the array
+        arr_inner = np.array(arr[0])
+    sorted_array=np.empty_like(arr_inner)
+    if multiple:
+        for i in range(arr_inner.shape[0]):
+            # Get the (2, m) slice
+            slice_arr = np.array(arr[i])
+            if transpose:
+                slice_arr=np.transpose(slice_arr)
 
-    # Use the sorted indices to reorder the entire array
-    sorted_array = arr[sorted_indices]
+            # Get the indices that would sort the first column
+            sorted_indices = np.argsort(slice_arr[:, 0])  # Note the [::-1] to reverse the order
 
+            if transpose:
+                out=np.transpose(slice_arr[sorted_indices])
+            else:
+                out=slice_arr[sorted_indices]
+
+            # Use the sorted indices to reorder the slice
+            sorted_array[i] = out
+    else:
+        if transpose:
+            slice_arr=np.transpose(arr_inner)
+        # Get the indices that would sort the first column
+        sorted_indices = np.argsort(arr_inner[:, 0]) # Note the [::-1] to reverse the order
+        # Use the sorted indices to reorder the entire array
+        sorted_array = arr_inner[sorted_indices]
+        if transpose:
+            sorted_array=np.transpose(sorted_array)
+   
+    if squeeze:
+        sorted_array=np.expand_dims(sorted_array, axis=0)
+
+    return sorted_array
+
+def reorder_data_descending(arr,multiple=False, transpose=False, squeeze=False):
+    """
+    Reorders a 2D array based on the values in the first column in descending order.
+
+    Parameters:
+    arr (numpy.ndarray or list): The input 2D array to be reordered.
+
+    Returns:
+    numpy.ndarray: The reordered array where rows are sorted based on the values in the first column.
+    """
+    # Convert arr to a NumPy array if it's not already
+    arr_inner = np.array(arr)
+
+    if squeeze:
+        # Remove single-dimensional entries from the shape of the array
+        arr_inner = np.array(arr[0])
+    sorted_array=np.empty_like(arr_inner)
+    if multiple:
+        for i in range(arr_inner.shape[0]):
+            # Get the (2, m) slice
+            slice_arr = np.array(arr[i])
+            if transpose:
+                slice_arr=np.transpose(slice_arr)
+
+            # Get the indices that would sort the first column
+            sorted_indices = np.argsort(slice_arr[:, 0])[::-1]  # Note the [::-1] to reverse the order
+
+            if transpose:
+                out=np.transpose(slice_arr[sorted_indices])
+            else:
+                out=slice_arr[sorted_indices]
+
+            # Use the sorted indices to reorder the slice
+            sorted_array[i] = out
+    else:
+        if transpose:
+            slice_arr=np.transpose(arr_inner)
+        # Get the indices that would sort the first column
+        sorted_indices = np.argsort(arr_inner[:, 0])[::-1]  # Note the [::-1] to reverse the order
+        # Use the sorted indices to reorder the entire array
+        sorted_array = arr_inner[sorted_indices]
+        if transpose:
+            sorted_array=np.transpose(sorted_array)
+   
+    if squeeze:
+        sorted_array=np.expand_dims(sorted_array, axis=0)
+    
     return sorted_array
 
 def load_spectra_info(path, data_type):
@@ -121,9 +201,15 @@ def load_spectra_info(path, data_type):
         except Exception as e:
             messagebox.showerror("Error", "Data not in a known format")
             print(e)
-    elif data_type == "BWtech":
+    elif data_type == "B&Wtek":
         try:
             return load_spectra_info_bwtech(path)
+        except Exception as e:
+            messagebox.showerror("Error", "Data not in a known format")
+            print(e)
+    elif data_type == "Brukker IR":
+        try:
+            return load_spectra_info_brukkerIR(path)
         except Exception as e:
             messagebox.showerror("Error", "Data not in a known format")
             print(e)
@@ -152,13 +238,19 @@ def load_spectra_data(path, data_type, silent=True):
                 print(e)
                 messagebox.showerror("Error", "Data not in a known format")
 
-    elif data_type == "BWtech":
+    elif data_type == "B&Wtek":
         try:
             return load_spectra_data_bwtech(path)
         except Exception as e:
             if  silent:
                 print(e)
                 messagebox.showerror("Error", "Data not in a known format")
+    elif data_type == "Brukker IR":
+        try:
+            return load_spectra_data_brukkerIR(path)
+        except Exception as e:
+            messagebox.showerror("Error", "Data not in a known format")
+            print(e)
 
 
 def load_spectra_info_horiba(path):
@@ -314,6 +406,86 @@ def load_spectra_info_bwtech(filename):
     return file_info
 
 
+def load_spectra_data_brukkerIR(filename):
+    """
+    Read numerical data from a text file starting from the line started by "Raw data".
+
+    Parameters:
+        filename (str): The name of the text file.
+
+    Returns:
+        data (list): A list of lists containing the numerical data.
+
+    Example:
+        data = read_data_from_file("data.txt")
+        print(data)
+    """
+    data = []
+
+
+    with open(filename, 'r') as file:
+       
+        headers=[]
+        x_values = []
+        y_values = []
+
+        for line in file:
+            line = line.strip()
+
+            # If the line starts with '#c', it's the X values
+            if line.startswith('#c'):
+                # Split the line into words, convert each word to a float, and store the result in x_values
+                x_values = [float(word) for word in line[2:].split()]
+            # If the line doesn't start with '#', it's a Y value
+            elif not line.startswith('#'):
+                # Convert the line to a float and store the result in y_values
+                y_values.append(float(line))
+
+    data =  np.transpose(np.array((x_values, y_values), dtype='float64'))
+    data=reorder_data(data)
+    return data
+
+def load_spectra_info_brukkerIR(filename):
+    """
+    This function reads a .dat file and extracts the metadata stored in lines starting with '#'.
+
+    Parameters:
+    filename: The path to the .dat file.
+
+    Returns:
+    file_info: A dictionary containing the title of the file and other metadata. If no metadata is found, a warning is included.
+    """
+    # Initialize an empty dictionary to store the file information
+    file_info = {}
+
+    # Open the file
+    with open(filename, 'r', encoding='utf-8', errors='replace')  as file:
+        # Initialize an empty list to store the metadata
+        metadata = []
+        
+        # Iterate over each line in the file
+        for line in file:
+            # Remove leading and trailing whitespace from the line
+            line = line.strip()
+
+            # If the line starts with '#', it's metadata
+            if line.startswith('#'):
+                # Add the line to the metadata list (excluding the '#' character)
+                metadata.append(line[1:])
+    
+    # If no metadata was found
+    if len(metadata) == 0:
+        # Set the title to the filename and include a warning
+        file_info["Title"] = filename
+        file_info["Warning"] = "No metadata"
+    else:
+        # Set the title and other information from the metadata
+        file_info["Title"] = metadata[1]
+        file_info["Other"] = metadata[0]
+
+    # Return the file information
+    return file_info
+
 # Define the function to save the text widget contents to a file
 def save_text(text_to_save):
     file_path = tk.filedialog.asksaveasfile(defaultextension=".txt",
@@ -338,6 +510,10 @@ def test2():
     #print(load_spectra_info_bwtech(path))
     foo=load_spectra_data_bwtech(path)
     print(foo[:,0])
-
+def test3():
+    filename=r"C:\Users\Admin\Documents\GitHub\Raman_Data_Processing\Test data\Other\IR\Arbocel_BC_200.0.dat"
+    foo=load_spectra_data_brukkerIR(filename)
+    print(foo)
 #test()
-#test2()
+
+#test3()
