@@ -948,6 +948,7 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
 
     def button_manual_adding_clicked():
         global peak_val, peaks, new_peak_entry  
+        button_peak_processing.config(state="normal")
         add_peak(new_peak_entry)
 
     def clean_peaks(event):
