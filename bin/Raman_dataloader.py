@@ -195,24 +195,29 @@ def load_spectra_info(path, data_type):
         info = load_spectra_info('spectra.txt', 'Horiba')
         print(info)
     """
+    key=False
     if data_type == "Horiba":
         try:
-            return load_spectra_info_horiba(path)
+           
+            return load_spectra_info_horiba(path), True
+           
         except Exception as e:
-            messagebox.showerror("Error", "Data not in a known format")
-            print(e)
+            messagebox.showerror("Error", "Metadata not in a known format")
+        return [], key
     elif data_type == "B&Wtek":
         try:
-            return load_spectra_info_bwtech(path)
+            return load_spectra_info_bwtech(path), True           
         except Exception as e:
-            messagebox.showerror("Error", "Data not in a known format")
-            print(e)
+            messagebox.showerror("Error", "Metadata not in a known format")
+            return [], key
     elif data_type == "Brukker IR":
         try:
-            return load_spectra_info_brukkerIR(path)
+            return load_spectra_info_brukkerIR(path), True
+            key=True
         except Exception as e:
-            messagebox.showerror("Error", "Data not in a known format")
-            print(e)
+            messagebox.showerror("Error", "Metadata not in a known format")
+            return [], key
+   
 
 
 def load_spectra_data(path, data_type, silent=True):
@@ -230,27 +235,31 @@ def load_spectra_data(path, data_type, silent=True):
         data = load_spectra_data('spectra.txt', 'Horiba')
         print(data)
     """
+    key=False
     if data_type == "Horiba":
         try:
-            return load_spectra_data_horiba(path)
+            return load_spectra_data_horiba(path),True
         except Exception as e:
             if  silent:
-                print(e)
                 messagebox.showerror("Error", "Data not in a known format")
+            return [], key
 
     elif data_type == "B&Wtek":
         try:
-            return load_spectra_data_bwtech(path)
+            return load_spectra_data_bwtech(path),True
+        
         except Exception as e:
             if  silent:
-                print(e)
                 messagebox.showerror("Error", "Data not in a known format")
+            return [], key
     elif data_type == "Brukker IR":
         try:
-            return load_spectra_data_brukkerIR(path)
+            return load_spectra_data_brukkerIR(path),True
+            
         except Exception as e:
             messagebox.showerror("Error", "Data not in a known format")
-            print(e)
+        return [], key
+
 
 
 def load_spectra_info_horiba(path):
