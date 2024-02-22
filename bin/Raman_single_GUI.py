@@ -91,18 +91,23 @@ def main(window_parent):
         """
         global graph_type, ax, fig, model_data
         data_type = model_data.get()
-        x = Raman_dataloader.load_spectra_data(path, data_type)
-        info = Raman_dataloader.load_spectra_info(path, data_type)
+        try:
+            x, key = Raman_dataloader.load_spectra_data(path, data_type)
+            info, key = Raman_dataloader.load_spectra_info(path, data_type)
+            if key:
+                  dat = [[x[:, 0], x[:, 1]]]
+            fig, ax = Raman_plot.plotter(dat,
+                                        ["Wavenumber (1/cm)",
+                                        "Intensity (A.U.)"],
+                                        info['Title'],
+                                        leyends=['Raw data'],
+                                        res=150,
+                                        lines=True)
+            fig = Raman_plot.update_plot(canvas, canvas_panel, fig, ax, dat)
+        except:
+            "key missing"
 
-        dat = [[x[:, 0], x[:, 1]]]
-        fig, ax = Raman_plot.plotter(dat,
-                                     ["Wavenumber (1/cm)",
-                                      "Intensity (A.U.)"],
-                                     info['Title'],
-                                     leyends=['Raw data'],
-                                     res=150,
-                                     lines=True)
-        fig = Raman_plot.update_plot(canvas, canvas_panel, fig, ax, dat)
+      
 
     def metadata(path, window):
         """
@@ -145,20 +150,23 @@ def main(window_parent):
         data_type = model_data.get()
 
         filepath = filedialog.askopenfilename(
-            filetypes=[("TXT Files", "*.txt")])
+            filetypes=[("TXT Files", "*.txt"), ("Dat Files","*.dat")])
 
         if filepath != '':
-            # Call the buttonCall() function or perform any desired action
-            buttonCall(filepath)
-
             # Call the lateral panel:
             # default values for the global variables
-            raw_dat = Raman_dataloader.load_spectra_data(filepath, data_type)
-            info = Raman_dataloader.load_spectra_info(filepath, data_type)
-            lateral_panel = Raman_lateralpanel.create_lateral_panel(
-                canvas, canvas_panel, window, filepath, fig, raw_dat, info, data_type)
-            lateral_panel.grid(row=0, column=1, rowspan=1, sticky="nsew")
-            button_meta.config(state="normal")
+            buttonCall(filepath)
+            raw_dat, key = Raman_dataloader.load_spectra_data(filepath, data_type)
+            info, key2 = Raman_dataloader.load_spectra_info(filepath, data_type)
+            if key and key2:
+                # Call the buttonCall() function or perform any desired action
+              
+                lateral_panel = Raman_lateralpanel.create_lateral_panel(
+                    canvas, canvas_panel, window, filepath, fig, raw_dat, info, data_type)
+                lateral_panel.grid(row=0, column=1, rowspan=1, sticky="nsew")
+                button_meta.config(state="normal")
+           
+    
 
     def on_popup_close(popup):
         """
@@ -214,7 +222,7 @@ def main(window_parent):
     label_model = ttk.Label(button_panel, text="Select the data format:")
     label_model .grid(row=0, column=0, padx=5, pady=5)
 
-    options = ['Horiba', 'BWtech']
+    options = ['Horiba', 'B&Wtek', 'Brukker IR']
 
     combobox = ttk.Combobox(button_panel, values=options)
     combobox.set(options[0])
