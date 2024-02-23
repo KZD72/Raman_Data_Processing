@@ -93,12 +93,107 @@ def create_dropdown(master, dictionary, row, column):
     dropdown.grid(row=row, column=column, padx=10, pady=10, sticky='nsew')  # Place the dropdown at the specified row and column
     return var  # Return the variable so you can get the selected option later
 
+def extract_peaks(dictionary, window):
+    """
+    Extracts and groups peak data from a nested dictionary structure.
+    
+    The function first extracts 'Center' values from the 'fit_results' of each entry in the input dictionary.
+    It then groups these 'Center' values into groups based on a given window.
+    Each group is represented by the average of its values.
+    
+    Parameters:
+    dictionary (dict): The input dictionary containing the 'fit_results'.
+    window (int): The window size for grouping 'Center' values.
+    
+    Returns:
+    dict: A dictionary where each key is a group label and each value is the average of the 'Center' values in that group.
+    """
+    
+    new_dictionary = {}
+
+    for key, value in dictionary.items():
+        fit_results = value.get('fit_results', {})
+        center_values = {k: round(v.get('Center', 0)) for k, v in fit_results.items()}
+        new_dictionary[key] = center_values
+
+    grouped_dictionary = {}
+    group_counter = 1
+
+    for key, value_dict in new_dictionary.items():
+        for sub_key, center_value in value_dict.items():
+            if not any(abs(center_value - val) <= window for group in grouped_dictionary.values() for val in group):
+                grouped_dictionary[f'P{group_counter}'] = [center_value]
+                group_counter += 1
+            else:
+                for group_key, group_values in grouped_dictionary.items():
+                    if any(abs(center_value - val) <= window for val in group_values):
+                        grouped_dictionary[group_key].append(center_value)
+                        break
+
+    # Calculate the average of each group
+    averaged_dictionary = {key+"_"+f"{round(sum(values) / len(values))}": round(sum(values) / len(values)) for key, values in grouped_dictionary.items()}
+    print(averaged_dictionary)
+    return averaged_dictionary
+
+def extract_keys(dictionary):
+    """
+    Extracts the keys of the nested dictionaries inside 'fit_results' from the first entry of the input dictionary.
+    
+    Parameters:
+    dictionary (dict): The input dictionary containing the 'fit_results'.
+    
+    Returns:
+    dict: A dictionary where each key is a key in the nested dictionaries inside 'fit_results' of the first entry in the input dictionary, and the value is the same as the key.
+    """
+    
+    # Get the first entry of the input dictionary
+    first_entry = next(iter(dictionary.values()))
+    
+    # Get the 'fit_results' dictionary of the first entry
+    fit_results = first_entry.get('fit_results', {})
+    
+    # Get the first nested dictionary inside 'fit_results'
+    first_nested_dict = next(iter(fit_results.values()), {})
+    
+    # Create a dictionary where the keys are the keys of the first nested dictionary and the values are the same as the keys
+    keys_dict = {key: key for key in first_nested_dict.keys()}
+
+    return keys_dict
+
+def recover_values(dict1_value, dict2, window, key_to_recover):
+    """
+    Recovers values from dict2 based on a given value and a given window.
+    
+    Parameters:
+    dict1_value (float): The value to look for in the 'Center' values of dict2.
+    dict2 (dict): The dictionary containing the 'fit_results' to recover values from.
+    window (int): The window size for comparing 'Center' values.
+    key_to_recover (str): The key whose value should be recovered from the 'fit_results' dictionary.
+    
+    Returns:
+    dict: A dictionary where each key is a key from the 'fit_results' dictionary in dict2 that matches dict1_value within the given window, and each value is the value of key_to_recover.
+    """
+    
+    # Create a new dictionary to store the recovered values
+    recovered_values = {}
+
+    # Iterate over each key-value pair in dict2
+    for key, value in dict2.items():
+        # Iterate over each key-value pair in the 'fit_results' dictionary
+        for fit_key, fit_value in value['fit_results'].items():
+            # Check if the 'Center' value is within the window of dict1_value
+            if abs(fit_value['Center'] - dict1_value) <= window:
+                # If it is, add the value of key_to_recover to the recovered values
+                recovered_values[fit_key] = fit_value.get(key_to_recover)
+
+    return recovered_values
+
 ###############################################################################
 def create_dashboard(main_window, canvas, canvas_panel, dictionary):
 
-    global selected_option
+    global selected_option, peaks,peaks_compare, peak_1_sel,peak_2_sel,peak_params,peak_params_sel
     
-   
+    
 
     def on_closing():
         """
@@ -182,14 +277,39 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
             save_button.grid(row=1, column=0, sticky='nsew')
 
             popup_window.mainloop()
+    
+    def update_window():
+        global peaks,peaks_compare, peak_params, peak_1_sel,peak_2_sel,peak_params_sel
+        try:
+            if float(window_width.get())>=1 and float(window_width.get())<100:
+                peaks=extract_peaks(dictionary,float(window_width.get()))        
+                peaks_compare={"None": 1}
+                peaks_compare.update(peaks)
+                peak_1_sel = create_dropdown(box_frame2, peaks,1,0)
+                peak_params_sel = create_dropdown(box_frame2, peak_params,1,1)    
+                peak_2_sel = create_dropdown(box_frame2, peaks_compare,1,2)
+            else:
+                error("Field must be a valid number [1,100]")
+        except:
+            error("Field must be a valid number [1,100]")
 
+    def show_value():
+        global peaks,peaks_compare,peak_1_sel,peak_2_sel,peak_params,peak_params_sel
+        print(peaks[peak_1_sel.get()])
+        print( peak_params_sel.get())
+        print(recover_values(peaks[peak_1_sel.get()], dictionary, float(window_width.get()), peak_params_sel.get()))
+
+
+    ###############################################################
+    ###############################################################
+    ### Graphic crreation                                       ###
+    ###############################################################
+    ###############################################################       
     # Creation of main panel elements
-    main_panel = tk.Frame(main_window, bg='white')
+    main_panel = tk.Frame(main_window, bg='white', width=900, height=500)
     main_panel.grid(row=0, column=0, padx=10, pady=10, sticky='nsew')
+  
 
-    # Grid layout configuration
-    main_panel.grid_columnconfigure(0, weight=1)
-    main_panel.grid_rowconfigure(0, weight=1)
 
     # Create subpanel frames within the main panel
     subpanel1 = tk.Frame(main_panel, bg='lightblue')
@@ -264,11 +384,11 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
     canvas_1.create_window(
         (0, 0), window=frame1, anchor="nw", tags="frame1")
     #Add text widge to show fit info:
-    text_widget = tk.Text(frame1, padx=10, pady=10)
+    text_widget = tk.Text(frame1, padx=2, pady=2, wrap="none")
     text_widget.tag_configure("bold", font=("TkDefaultFont", 11, "bold"))
     text_widget.tag_configure("red", foreground="blue")
     text_widget.insert("end", "Fitting Info:\n", "bold")
-    text_widget.grid(row=0, column=0, padx=10, pady=10, sticky='nsew')
+    text_widget.grid(row=0, column=0, padx=2, pady=2, sticky='nsew')
 
     button_full_fit_info= tk.Button(container_frame, text='Show full fit info', command= fit_info_clicked, state="disabled")
     button_full_fit_info.grid(row=1, column=0, padx=10, pady=10,sticky='w')
@@ -290,3 +410,68 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
     ### Subpanel 2                                              ###
     ###############################################################
    
+    box_frame = ttk.Frame(subpanel2, borderwidth=1, relief="groove")
+    box_frame.grid(row=0, column=0, padx=10, pady=10, sticky='nsew')
+    # Configure box_frame to expand in both directions
+    box_frame.grid_rowconfigure(0, weight=1)
+    box_frame.grid_columnconfigure(0, weight=1)
+
+    box_frame2 = ttk.Frame(subpanel2, borderwidth=1, relief="groove")
+    box_frame2.grid(row=0, column=1, padx=10, pady=10, sticky='nsew')
+    # Configure box_frame to expand in both directions
+    box_frame2.grid_rowconfigure(0, weight=1)
+    box_frame2.grid_columnconfigure(0, weight=1)
+
+    
+    box_frame3 = ttk.Frame(subpanel2, borderwidth=1, relief="groove")
+    box_frame3.grid(row=1, column=0, padx=10, pady=10, sticky='nsew')
+    # Configure box_frame to expand in both directions
+    box_frame3.grid_rowconfigure(0, weight=1)
+    box_frame3.grid_columnconfigure(0, weight=1)
+
+    ### Box frame
+    tk.Label(box_frame, text="Spectral peak window").grid(row=0)
+    window_width = tk.Entry(box_frame)
+    window_width.insert(0, "5.0")
+    window_width.grid(row=1, column=0)
+
+    peaks=extract_peaks(dictionary,float(window_width.get()))
+    peaks_compare={"None": 1}
+    peaks_compare.update(peaks)
+
+    peak_params=extract_keys(dictionary)
+
+    window_update = tk.Button(box_frame, text='Update', command=update_window)
+    window_update.grid(row=1, column=1, padx=10, pady=10)
+
+     ### Box frame2
+    tk.Label(box_frame2, text="Peak:").grid(row=0,column=0)
+    peak_1_sel = create_dropdown(box_frame2, peaks,1,0)
+    tk.Label(box_frame2, text="Parameter:").grid(row=0,column=1)
+    peak_params_sel = create_dropdown(box_frame2, peak_params,1,1)    
+    tk.Label(box_frame2, text="Normalise by:").grid(row=0,column=2)
+    peak_2_sel = create_dropdown(box_frame2, peaks_compare,1,2)
+
+    ### Box frame3
+    postpro_tab = ttk.Notebook(box_frame3)
+    postpro_tab.grid(row=0, column=0, padx=10, pady=2, sticky='nsew')
+    tab1 = ttk.Frame(postpro_tab)
+    tab2 = ttk.Frame(postpro_tab)
+    postpro_tab.add(tab1, text="Inner data")
+    postpro_tab.add(tab2, text="External data")
+    #postpro_tab.bind("<<NotebookTabChanged>>", clean_external)
+    tab1.grid_columnconfigure(0, weight=4)
+    tab1.grid_columnconfigure(1, weight=2)
+    tab2.grid_columnconfigure(3, weight=6)
+    tab2.grid_columnconfigure(0, weight=4)
+
+    ## Tab_1
+    foo = tk.Button(tab1, text='Update', command=show_value)
+    foo.grid(row=1, column=1, padx=10, pady=10)
+   
+
+
+
+
+
+ 
