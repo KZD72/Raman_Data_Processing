@@ -332,6 +332,7 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
     global baseline_type
     global dict_container
     global new_peak_entry
+    global peak_finding_tab
 
     raw_dat = raw_dat_a
     x_raw = raw_dat[:, 0]
@@ -400,7 +401,7 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
             lamb_value = float(field_lambda.get())
 
             raw_x, raw_y = data_clipper(raw_dat, spectral_window)
-            x, y = calc_baseline(raw_dat, spectral_window, lam=1e5*lamb_value)
+            x, y = calc_baseline(raw_dat, spectral_window, lam=1e4*lamb_value)
             dat = [[raw_x, raw_y], [x, y]]
             if silent:
                 fig, ax = Raman_plot.plotter(dat,
@@ -948,11 +949,12 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
 
     def button_manual_adding_clicked():
         global peak_val, peaks, new_peak_entry  
+        button_load_batch_folder.config(state="normal")
         button_peak_processing.config(state="normal")
         add_peak(new_peak_entry)
 
     def clean_peaks(event):
-        global peak_val, peaks, x_baseline, y_baseline, info  
+        global peak_val, peaks, x_baseline, y_baseline, info, selected_tab  
 
         if len(peak_val)>0:
             dat = [[x_baseline, y_baseline]]
@@ -971,8 +973,9 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
                 canvas, canvas_panel, fig, ax, dat)
         peak_val=[]
         peaks=[]
+        
 
-    def button_load_batch_folder():
+    def load_batch_folder():
         """
         Opens a file dialog to select and load the data file.
         """
@@ -984,8 +987,8 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
         # Get a list of all files in the directory
         files = os.listdir(directory)
 
-        # Filter the list to only include .txt files
-        txt_files = [f for f in files if f.endswith('.txt')]
+        # Filter the list to only include .txt or datfiles
+        txt_files = [f for f in files if f.endswith('.txt') or f.endswith('.dat')]
 
         # Create a new Tkinter window
         root = tk.Tk()
@@ -1006,9 +1009,9 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
         for item, file in enumerate(txt_files):
             start_time = time.time()
             try:
-                check = Raman_dataloader.load_spectra_data(
+                check, key = Raman_dataloader.load_spectra_data(
                     os.path.join(directory, file), data_type, silent=False)
-                if len(check) > 0:
+                if key:
                     valid_files.append(os.path.join(directory, file))
                 else:
                     numer_non_valid_files = numer_non_valid_files+1
@@ -1031,7 +1034,9 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
             button_batch.config(state="normal")
 
     def button_batch_proccesing():
-        global valid_files, normalise_check, raw_dat, info, bas_man_points, x_baseline, y_baseline,dict_container
+        global valid_files, normalise_check, raw_dat, info 
+        global bas_man_points, x_baseline, y_baseline,dict_container
+        global peak_finding_tab, peak_val, peaks
 
         new_x_baseline = [bas_man_points[i, 0]
                           for i in range(1, len(bas_man_points) - 1)]
@@ -1055,8 +1060,8 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
 
         for item,file in enumerate(valid_files):
             
-            raw_dat = Raman_dataloader.load_spectra_data(file, data_type)
-            info = Raman_dataloader.load_spectra_info(file, data_type)
+            raw_dat, key = Raman_dataloader.load_spectra_data(file, data_type)
+            info, key2 = Raman_dataloader.load_spectra_info(file, data_type)
             plotShow = False  # False To not show the images
             start_time = time.time()
             if file == valid_files[-1]:
@@ -1093,7 +1098,12 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
                         if normalise_check:
                             button_normalise_clicked(silent=False)
                         try:
-                            button_peak_detection_clicked(silent=False)
+                            selected_tab = peak_finding_tab.tab(peak_finding_tab.select(), "text")
+                            if selected_tab=="Auto":
+                                button_peak_detection_clicked(silent=False)
+                            else:
+                                 peak_val= peak_val
+                                 peaks=peaks
                             try:
                                 dict_container.update(Raman_single_peak_fit_GUI.batch_fit(
                                     canvas, canvas_panel, info, x_baseline, y_baseline, peak_val, file, silent=plotShow)
@@ -1589,7 +1599,7 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
         row=0, column=0, padx=10, pady=2, sticky='e')
     # Create button in tab 4
     button_load_batch_folder = tk.Button(tab6, text='Load folder',
-                                         command=button_load_batch_folder,
+                                         command=load_batch_folder,
                                          state="disabled"
                                          )
     button_load_batch_folder.grid(
