@@ -74,261 +74,6 @@ def error(text):
     messagebox.showerror("Error", text)
 
 
-
-def dict_to_list(dictionary):
-    """
-    Converts the values of a dictionary to a NumPy array.
-
-    Args:
-        dictionary (dict): The input dictionary.
-
-    Returns:
-        numpy.ndarray: The NumPy array containing the dictionary values.
-    """
-    return np.array(list(dictionary.values()), dtype=object)
-
-
-def pad_dictionary(dictionary):
-    """
-    Fill missing keys in each dictionary entry with 'float("nan")' while maintaining alphabetical order.
-
-    Parameters:
-        dictionary (dict): Dictionary to be filled.
-
-    Returns:
-        filled_dict (dict): Dictionary with filled entries.
-
-    Example:
-        your_dict = {
-            'aa': {'a': 2},
-            'bb': {'a': 5, 'b': 6, 'c': 7},
-            'cc': {'a': 8, 'b': 6, 'd': 7},
-            'dd': {'a': 11, 'b': 12, 'c': 13},
-            'ee': {'a': 14, 'c': 15}
-        }
-
-        filled_dict = fill_missing_keys(your_dict)
-    """
-    keys = list(dictionary.keys())
-    all_keys = sorted(set().union(*[dictionary[key] for key in keys]))
-
-    filled_dict = {}
-    for key in keys:
-        entry = dictionary[key]
-        filled_entry = {**{k: float("nan") for k in all_keys}, **entry}
-        filled_dict[key] = filled_entry
-
-    return filled_dict
-
-
-def calculate_quotients(raw_dictionary, param):
-    """
-    Calculate the quotients of a specific parameter with each key as the denominator.
-
-    Parameters:
-        raw_dictionary (dict): Dictionary containing the data.
-        param (str): Parameter to calculate the quotients.
-
-    Returns:
-        quotients (ndarray): Matrix of quotients.
-        keys (list): List of keys from the dictionary.
-        params (list): List of parameters from the dictionary.
-
-    Example:
-        your_dict = {
-            'aa': {'a': 2, 'b': 3, 'c': 4},
-            'bb': {'a': 5, 'b': 6, 'c': 7},
-            'cc': {'a': 8, 'c': 10},
-            'dd': {'a': 11, 'b': 12, 'c': 13},
-            'ee': {'a': 14, 'b': 14, 'c': 15}
-        }
-
-        quotients, keys, params = calculate_quotients(your_dict, 'a')
-    """
-    dictionary = pad_dictionary(raw_dictionary)
-    keys = list(dictionary.keys())  # Get the keys from the dictionary
-
-    # Get the parameters from the first key
-    params = list(dictionary[keys[0]].keys())
-    # Create a 2D array of values from the dictionary
-    values = np.array([list(dictionary[key].values())
-                      for key in keys], dtype='float64')
-
-    # Find the index of the specified parameter
-    param_index = params.index(param)
-
-    # Initialize an array to store the quotients
-    quotients = np.zeros((len(keys), len(keys)), dtype=object)
-
-    # Calculate the quotients
-    for i in range(len(keys)):
-        if param in dictionary[keys[i]]:
-            if values[i, param_index] > 1e-12:
-                quotients[:, i] = values[:, param_index] / \
-                    values[i, param_index]
-            else:
-                quotients[:, i] = np.nan
-        else:
-            quotients[:, i] = np.nan
-
-    return quotients, keys, params
-
-
-def create_table(root, data, header):
-    """
-    Create a table in a Tkinter window.
-
-    Parameters:
-        root (tk.Tk): Root Tkinter window object.
-        data (list): 2D list of data to populate the table.
-        header (list): List of column headers.
-
-    Returns:
-        str: Formatted table as a string.
-
-    Example:
-        root = tk.Tk()
-        data = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
-        header = ['A', 'B', 'C']
-        table_text = create_table(root, data, header)
-        print(table_text)
-        root.mainloop()
-    """
-    # Get the number of rows and columns in the data
-    num_rows = len(data)
-    num_columns = len(data[0])
-
-    table_text = ''
-
-    # Create labels for column headers
-    for j in range(num_columns):
-        label = tk.Label(root, text=f"{header[j]}", relief=tk.RIDGE, width=12)
-        label.grid(row=0, column=j + 1)
-
-    # Create labels for row headers and data cells
-    for i in range(num_rows):
-        # Create label for row header
-        label = tk.Label(root, text=f"{header[i]}", relief=tk.RIDGE, width=8)
-        label.grid(row=i + 1, column=0)
-
-        # Create labels for data cells
-        for j in range(num_columns):
-            formatted_value = f"{data[i][j]:.3f}"
-            label = tk.Label(root, text=formatted_value,
-                             relief=tk.SOLID, width=12)
-            label.grid(row=i + 1, column=j + 1)
-
-            # Add the formatted value to the table text
-            table_text += formatted_value
-
-            # Add a comma separator if not the last column
-            if j < num_columns - 1:
-                table_text += ', '
-
-        # Add a new line after each row
-        table_text += '\n'
-
-    return table_text
-
-
-def create_plain_table(data, header):
-    """
-    Create a string representation of a table.
-
-    Parameters:
-        data (list): 2D list of data to populate the table.
-        header (list): List of column headers.
-
-    Returns:
-        str: Formatted table as a string.
-    """
-    # Get the number of rows and columns in the data
-    num_rows = len(data)
-    num_columns = len(data[0])
-
-    table_text = ''
-
-    # Add column headers to the table text
-    table_text += ', '.join(header) + '\n'
-
-    # Add data cells to the table text
-    for i in range(num_rows):
-        row_values = [f"{data[i][j]:.3f}" for j in range(num_columns)]
-        table_text += ', '.join(row_values) + '\n'
-
-    return table_text
-
-
-def expanded_dict(dictionary, entries, label):
-    """
-    Add new subentry to each entry in the dictionary.
-
-    Parameters:
-        dictionary (dict): Original dictionary.
-        entries (list): List of new entries to be added.
-        label (str): Label for the new subentry.
-
-    Returns:
-        dict: Updated dictionary with the new subentry.
-
-    Example:
-        dictionary = {
-            1: {'Gaussian_component': 0.65899564, 'Center': 1406.31829, 'FWHM': 69.6858762, 'Intensity': 7152.90713},
-            2: {'Gaussian_component': 0.36174242, 'Center': 437.299737, 'FWHM': 10.925679, 'Intensity': 6093.78661},
-            ...
-        }
-        entries = [100, 200, ...]
-        label = 'Integrated Intensity'
-        expanded_dict(dictionary, entries, label)
-    """
-    iterator = 0
-    for key, subentry in dictionary.items():
-        subentry[label] = entries[iterator]
-        iterator = iterator+1
-    return dictionary
-
-
-def voigt_fix_dic(dictionary):
-    """
-    Calculates and adds the 'FWHM' entry to the dictionary using the Voigt function approximation with ~0.02% accuracy.
-
-    The Voigt function approximation is based on John F. Kielkopf's approach (1973),
-    "New approximation to the Voigt function with applications to spectral-line profile analysis",
-    Journal of the Optical Society of America, 63 (8): 987, doi:10.1364/JOSA.63.000987
-
-    Parameters:
-        dictionary (dict): The input dictionary containing the subentries.
-
-    Returns:
-        dict: The dictionary with the 'FWHM' entry added to the subentries where 'Gauss_FWHM' and 'Lorentz_FWHM' exist.
-
-    Example:
-        input_dict = {
-            1: {'Gauss_FWHM': 368.614301, 'Lorentz_FWHM': 116.375262, 'Center': 1406.16995},
-            2: {'Gauss_FWHM': 10.9247146, 'Lorentz_FWHM': 20.346789, 'Center': 437.299772},
-            3: {'Gauss_FWHM': 25.7036236, 'Lorentz_FWHM': 50.987631, 'Center': 1251.33855}
-        }
-        output_dict = voigt_fix_dic(input_dict)
-        print(output_dict)
-    """
-
-    for subentry in dictionary.values():
-        if 'Gauss_FWHM' in subentry and 'Lorentz_FWHM' in subentry:
-            # Calculate the FWHM using the Voigt function approximation
-            fwhm = 0.5346 * subentry['Lorentz_FWHM'] + np.sqrt(
-                subentry['Gauss_FWHM'] * subentry['Gauss_FWHM'] + 0.2166 * subentry['Lorentz_FWHM'] * subentry['Lorentz_FWHM'])
-            # Insert the 'FWHM' subentry after 'Center'
-            subentry_keys = list(subentry.keys())
-            center_index = subentry_keys.index('Center')
-            subentry_keys.insert(center_index + 1, 'FWHM')
-            subentry_values = list(subentry.values())
-            subentry_values.insert(center_index + 1, fwhm)
-            subentry.clear()
-            subentry.update(zip(subentry_keys, subentry_values))
-
-    return dictionary
-
-
 def on_popup_close(popup):
     popup.grab_release()  # Release the grab
     popup.destroy()
@@ -465,7 +210,10 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
     # Subpanel 2
     subpanel2.grid_rowconfigure(0, weight=1)  # Configure row weight
     subpanel2.grid_columnconfigure(0, weight=1)  # Configure column weight
-
+    
+    ###############################################################
+    ### Subpanel 1                                              ###
+    ###############################################################
     # Create the decoration of the subpanels
     # Create a style for the labels
     style = ttk.Style()
@@ -528,7 +276,6 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
 
     # Second child frame
  
-
     frame2 = ttk.Frame(box_frame, borderwidth=2, relief="groove")    
     frame2.grid(row=0, column=1, padx=10, pady=10, sticky='nsew')
     # label dropdown 
@@ -539,5 +286,7 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
 
     button_fit = tk.Button(frame2, text='Show fit', command=fit_display)
     button_fit.grid(row=2, column=0, padx=10, pady=10)
-
+    ###############################################################
+    ### Subpanel 2                                              ###
+    ###############################################################
    

@@ -471,7 +471,6 @@ def batch_fit(canvas, canvas_panel, info, x, y, peaks, file_path, silent=False):
                                    'post_process_results':formated_info,
                                    'full_fit_info':info_fit}}
     
-
    
     if silent:        
         print("Updated graph")
@@ -485,104 +484,7 @@ def batch_fit(canvas, canvas_panel, info, x, y, peaks, file_path, silent=False):
                                 leyend_frame=[True, 'b']
                                 )
         Raman_plot.update_plot(canvas, canvas_panel, fig, ax, plots_to_show)
-    # #####
-    # # Saving graphs and data
-    # #####
-    # # Save the figure
-    # try:
-
-    #     directory = os.path.dirname(file_path)
-    #     Name_to_save = os.path.join(
-    #         directory, info['Title']+"_Fit_Results"+".png")
-    #     fig.savefig(Name_to_save)
-    # except Exception as e:
-    #     print("Error:", e)
-
-    # # Save the dinal data
-    # try:
-    #     rows = []
-    #     iter = 0
-    #     for entry in plots_to_show:
-
-    #         if iter == 0:
-    #             rows.append(entry[0])
-    #             rows.append(entry[1])
-    #             iter = iter+1
-    #         else:
-    #             rows.append(entry[1])
-    #             iter = iter+1
-
-    #     headers = []
-    #     if len(plots_to_show) < 2:
-    #         headers.append('Wavenumber (1/cm)')
-    #         headers.append('Raman intensity (1/cm)')
-    #     elif len(plots_to_show) < 3:
-    #         headers.append('Wavenumber (1/cm)')
-    #         headers.append('Raman intensity (1/cm)')
-    #         headers.append('Model Raman intensity (1/cm)')
-    #     else:
-    #         headers.append('Wavenumber (1/cm)')
-    #         headers.append('Raman intensity (1/cm)')
-    #         headers.append('Model Raman intensity (1/cm)')
-    #         [headers.append(f"P_{iterator+1} intesity (1/cm)")
-    #          for iterator in range(len(plots_to_show)-2)]
-    #     directory = os.path.dirname(file_path)
-    #     Name_to_save = os.path.join(
-    #         directory, info['Title']+"_Fit_datasets"+".csv")
-    #     if os.path.isfile(Name_to_save):
-    #         # If the file exists, remove it
-    #         os.remove(Name_to_save)
-    #     if Name_to_save is not None:
-    #         with open(Name_to_save, "w", newline='') as csvfile:
-    #             writer = csv.writer(csvfile)
-    #             writer.writerow(headers)  # Write the headers as the first row
-    #             writer.writerows(np.transpose(rows))  # Write the rows of data
-    # except Exception as e:
-    #     print("Error:", e)
-
-    # # Save the postProdata
-    # try:
-
-    #     directory = os.path.dirname(file_path)
-    #     Name_to_save = os.path.join(
-    #         directory, info['Title']+"_Fit_Results"+".txt")
-    #     if os.path.isfile(Name_to_save):
-    #         # If the file exists, remove it
-    #         os.remove(Name_to_save)
-    #     # Write the dictionary to a file
-    #     with open(Name_to_save, 'w') as f:
-    #         for key, value in formated_info.items():
-    #             f.write(f'{key}: {value}\n')
-    #     # Append the fit report to the file
-    #     with open(Name_to_save, 'a') as f:
-    #         f.write('\nFit Report:\n')
-    #         f.write(info_fit)
-
-    #     iterator = 0
-    #     keys = list(formated_info.keys())
-    #     # Get the parameters from the first key
-    #     param_names = list(formated_info[keys[0]].keys())
-    #     table_to_save = []
-    #     table_to_save.append(
-    #         "\n\nPostprocesed ratios between peak parameters:")
-    #     for parameter in param_names:
-    #         # print(parameter)
-    #         table_to_save.append(parameter+":\n")
-    #         labels = ["P"+str(item+1)
-    #                   for item in range(len(formated_info.items()))]
-
-    #         # print(labels)
-    #         table_to_save.append(create_plain_table(
-    #             calculate_quotients(formated_info, parameter)[iterator], labels))
-    #         table_to_save = list(dict.fromkeys(table_to_save))
-    #         table_to_save.append("\n\n")
-    #     with open(Name_to_save, 'a') as f:
-    #         # Write the table string to the file
-    #         table_to_save_string = '\n'.join(table_to_save)
-    #         f.write(table_to_save_string)
-
-    # except Exception as e:
-    #     print("Error:", e)
+   
     return result_dict
 
 

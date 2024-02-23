@@ -377,31 +377,31 @@ def params_f(peaks, model_type=None):
 
         if model_type[item]=="Gaussian":
             params.add('Peak_'+str(item+1)+'_Center', value=peaks[item][0],min=0)
-            params.add('Peak_'+str(item+1)+'_FWHM', value=5,min=1)
+            params.add('Peak_'+str(item+1)+'_FWHM', value=2,min=1)
             params.add('Peak_'+str(item+1)+'_Intensity', value=peaks[item][1],min=0)
         elif model_type[item]=="Lorentz" :
             params.add('Peak_'+str(item+1)+'_Center', value=peaks[item][0],min=0)
-            params.add('Peak_'+str(item+1)+'_FWHM', value=5,min=1)
+            params.add('Peak_'+str(item+1)+'_FWHM', value=2,min=1)
             params.add('Peak_'+str(item+1)+'_Intensity', value=peaks[item][1],min=0)
         elif model_type[item]=="Gauss-Lorentz":
             params.add('Peak_'+str(item+1)+'_Gaussian_component', value=0.5,min=0,max=1)
             params.add('Peak_'+str(item+1)+'_Center', value=peaks[item][0],min=0)
-            params.add('Peak_'+str(item+1)+'_FWHM', value=5,min=1)
+            params.add('Peak_'+str(item+1)+'_FWHM', value=2,min=1)
             params.add('Peak_'+str(item+1)+'_Intensity', value=peaks[item][1],min=0)
         elif model_type[item]=="Voigt":
             params.add('Peak_'+str(item+1)+'_Center', value=peaks[item][0],min=0)
-            params.add('Peak_'+str(item+1)+'_Gauss_FWHM', value=5,min=0.1)
-            params.add('Peak_'+str(item+1)+'_Lorentz_FWHM', value=5,min=0.1)
+            params.add('Peak_'+str(item+1)+'_Gauss_FWHM', value=2,min=0.1)
+            params.add('Peak_'+str(item+1)+'_Lorentz_FWHM', value=2,min=0.1)
             params.add('Peak_'+str(item+1)+'_Intensity', value=peaks[item][1],min=0)
         elif model_type[item]=="Fano-Simply":
             params.add('Peak_'+str(item+1)+'_Center', value=peaks[item][0],min=0)
-            params.add('Peak_'+str(item+1)+'_Fano_FWHM', value=5,min=0.1)
+            params.add('Peak_'+str(item+1)+'_Fano_FWHM', value=2,min=0.1)
             params.add('Peak_'+str(item+1)+'_Intensity', value=peaks[item][1],min=0)
             params.add('Peak_'+str(item+1)+'_Fano_Asymmetry', value=0,min=-1e4,max=1e4)
         elif model_type[item]=="Fano-Full":
             params.add('Peak_'+str(item+1)+'_Center', value=peaks[item][0],min=0)
-            params.add('Peak_'+str(item+1)+'_Gauss_FWHM', value=5,min=0.1)
-            params.add('Peak_'+str(item+1)+'_Fano_FWHM', value=5,min=0.1)
+            params.add('Peak_'+str(item+1)+'_Gauss_FWHM', value=2,min=0.1)
+            params.add('Peak_'+str(item+1)+'_Fano_FWHM', value=2,min=0.1)
             params.add('Peak_'+str(item+1)+'_Intensity', value=peaks[item][1],min=0)
             params.add('Peak_'+str(item+1)+'_Fano_Asymmetry',  value=0,min=-1e4,max=1e4)
         elif model_type[item]=='Not used':

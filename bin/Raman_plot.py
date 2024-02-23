@@ -35,6 +35,7 @@ import re
 # Import FigureCanvasTkAgg class and NavigationToolbar2Tk from matplotlib
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 import tkinter as tk  # Import the Tkinter module for GUI
+from tkinter import ttk
 from tkinter import filedialog
 
 
@@ -88,6 +89,20 @@ def adjust_label_positions(labels, positions, threshold=5, fontsize=6):
 
     return adjusted_positions
 
+def create_dropdown(master, dictionary, row, column):
+    # Get the labels from the dictionary
+    labels = list(dictionary.keys())
+
+    # Create a Tkinter variable
+    var = tk.StringVar(master)
+
+    # Set the default option
+    var.set(labels[0])
+
+    # Create the dropdown menu using a Combobox
+    dropdown = ttk.Combobox(master, textvariable=var, values=labels)
+    dropdown.grid(row=row, column=column, padx=10, pady=10, sticky='nsew')  # Place the dropdown at the specified row and column
+    return var  # Return the variable so you can get the selected option later
 
 def plotter(data_list, labels, title, error=None, lines=None, symbols=None, leyends=None, size=None, res=None, arrow=None, text=None, leyend_frame=[False, False]):
 
@@ -330,24 +345,26 @@ def update_plot(canvas, canvas_panel, fig, ax, data):
         # Create a new Tkinter window
         window = tk.Toplevel(canvas_panel.winfo_toplevel())
 
+        #Label
+        label = tk.Label(window, text='Select graph options:')
+        label.config(font=("bold", 14))
+        label.config(font=("underline"))
+        label.grid(row=0, column=0, padx=10, pady=2, sticky='nsew')
+
         # Define the options for size and resolution
-        size_options = ["double_width", "double_height", "double_size", "double_size_double_heigh", "normal"]
+        size_options = ["normal", "double_width", "double_height", "double_size", "double_size_double_heigh"]
         res_options = [150, 300, 600, 1200]
+        size_dict = {option: option for option in size_options}
+        res_dict = {option: option for option in res_options}
 
-        # Create variables to store the user's selections
-        size_var = tk.StringVar(window)
-        res_var = tk.IntVar(window)
-
-        # Set the default selections
-        size_var.set("normal")
-        res_var.set(150)
 
         # Create the OptionMenu widgets
-        size_menu = tk.OptionMenu(window, size_var, *size_options)
-        size_menu.pack()
+        
+        size_var=create_dropdown(window, size_dict, 1, 0)
+       
 
-        res_menu = tk.OptionMenu(window, res_var, *res_options)
-        res_menu.pack()
+        res_var = create_dropdown(window, res_dict, 2, 0)
+        
 
         # Create the confirmation button
         def confirm():
@@ -371,7 +388,7 @@ def update_plot(canvas, canvas_panel, fig, ax, data):
             window.destroy()
 
         confirm_button = tk.Button(window, text="Confirm", command=confirm)
-        confirm_button.pack()
+        confirm_button.grid(row=3, column=0, padx=10, pady=10, sticky='nsew')
 
 
    # Define the button styles
