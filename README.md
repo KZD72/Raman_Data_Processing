@@ -1,6 +1,6 @@
 # Raman Spectra Analysis Tool
 
-This project provides a program capable of fully analyzing Raman spectra from different types of spectrometers. It features a graphical user interface (GUI) and supports various baseline removal and peak finding strategies.
+This project provides a program capable of fully analyzing Raman and IR spectra from different types of spectrometers. It features a graphical user interface (GUI) and supports various baseline removal and peak finding strategies.
 
 ## Features
 
