@@ -78,6 +78,7 @@ def on_popup_close(popup):
     popup.grab_release()  # Release the grab
     popup.destroy()
 
+
 def create_dropdown(master, dictionary, row, column):
     # Get the labels from the dictionary
     labels = list(dictionary.keys())
@@ -89,9 +90,65 @@ def create_dropdown(master, dictionary, row, column):
     var.set(labels[0])
 
     # Create the dropdown menu using a Combobox
-    dropdown = ttk.Combobox(master, textvariable=var, values=labels)
+    # Set a fixed width for the combobox
+    dropdown = ttk.Combobox(master, textvariable=var, values=labels, width=20)
     dropdown.grid(row=row, column=column, padx=10, pady=10, sticky='nsew')  # Place the dropdown at the specified row and column
     return var  # Return the variable so you can get the selected option later
+
+
+class FilteredListbox:
+    def __init__(self, master, dictionary, row, column):
+        self.master = master
+        self.row = row
+        self.column = column
+
+        # All of the items for the listbox.
+        self.items = list(dictionary.keys())
+
+        # The current filter. Setting it to None initially forces the first update.
+        self.curr_filter = None
+
+        # Create the filter label and entry box.
+        tk.Label(master, text='Filter Search:').grid(row=row, column=column)
+        self.filter_box = tk.Entry(master)
+        self.filter_box.grid(row=row+1, column=column)
+
+        # A listbox with scrollbars.
+        tk.Label(master, text='Select the file:').grid(row=row+2, column=column)
+
+        yscrollbar = tk.Scrollbar(master, orient='vertical')
+        yscrollbar.grid(row=row+3, column=column+1, sticky='ns')
+
+        xscrollbar = tk.Scrollbar(master, orient='horizontal')
+        xscrollbar.grid(row=row+4, column=column, sticky='we')
+
+        self.listbox = tk.Listbox(master)
+        self.listbox.grid(row=row+3, column=column, sticky='nswe')
+
+        yscrollbar.config(command=self.listbox.yview)
+        xscrollbar.config(command=self.listbox.xview)
+
+        # The initial update.
+        self.on_tick()
+
+    def on_tick(self):
+        if self.filter_box.get() != self.curr_filter:
+            # The contents of the filter box has changed.
+            self.curr_filter = self.filter_box.get()
+
+            # Refresh the listbox.
+            self.listbox.delete(0, 'end')
+
+            for item in self.items:
+                if self.curr_filter in item:
+                    self.listbox.insert('end', item)
+
+        self.master.after(200, self.on_tick)
+
+    def get(self):
+        return self.listbox.get(tk.ACTIVE)
+    
+    
 
 def extract_peaks(dictionary, window):
     """
@@ -178,6 +235,7 @@ def recover_values(dict1_value, dict2, window, key_to_recover):
     recovered_values = {}
 
     # Iterate over each key-value pair in dict2
+    print(dict2.items())
     for key, value in dict2.items():
         # Iterate over each key-value pair in the 'fit_results' dictionary
         for fit_key, fit_value in value['fit_results'].items():
@@ -193,7 +251,7 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
 
     global selected_option, peaks,peaks_compare, peak_1_sel,peak_2_sel,peak_params,peak_params_sel
     
-    
+    print(dictionary.items())
 
     def on_closing():
         """
@@ -295,8 +353,7 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
 
     def show_value():
         global peaks,peaks_compare,peak_1_sel,peak_2_sel,peak_params,peak_params_sel
-        print(peaks[peak_1_sel.get()])
-        print( peak_params_sel.get())
+    
         print(recover_values(peaks[peak_1_sel.get()], dictionary, float(window_width.get()), peak_params_sel.get()))
 
 
@@ -306,8 +363,8 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
     ###############################################################
     ###############################################################       
     # Creation of main panel elements
-    main_panel = tk.Frame(main_window, bg='white', width=900, height=500)
-    main_panel.grid(row=0, column=0, padx=10, pady=10, sticky='nsew')
+    main_panel = tk.Frame(main_window, bg='white', width=1000, height=500)
+    main_panel.grid(row=0, column=0, padx=1, pady=1, sticky='nsew')
   
 
 
@@ -397,15 +454,11 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
     # Second child frame
  
     frame2 = ttk.Frame(box_frame, borderwidth=2, relief="groove")    
-    frame2.grid(row=0, column=1, padx=10, pady=10, sticky='nsew')
-    # label dropdown 
-    label_drop = ttk.Label(frame2, text="Select the file:")
-    label_drop.grid(row=0, column=0, padx=5, pady=5)
+    frame2.grid(row=0, column=1, padx=10, pady=10, sticky='nsew')   
     # dropdown to select the file:
-    selected_option = create_dropdown(frame2, dictionary,1,0)
-
+    selected_option = FilteredListbox(frame2, dictionary, 0,0)
     button_fit = tk.Button(frame2, text='Show fit', command=fit_display)
-    button_fit.grid(row=2, column=0, padx=10, pady=10)
+    button_fit.grid(row=5, column=0, padx=10, pady=10)
     ###############################################################
     ### Subpanel 2                                              ###
     ###############################################################
