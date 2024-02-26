@@ -189,7 +189,7 @@ def extract_peaks(dictionary, window):
 
     # Calculate the average of each group
     averaged_dictionary = {key+"_"+f"{round(sum(values) / len(values))}": round(sum(values) / len(values)) for key, values in grouped_dictionary.items()}
-    print(averaged_dictionary)
+    #print(averaged_dictionary)
     return averaged_dictionary
 
 def extract_keys(dictionary):
@@ -235,14 +235,15 @@ def recover_values(dict1_value, dict2, window, key_to_recover):
     recovered_values = {}
 
     # Iterate over each key-value pair in dict2
-    print(dict2.items())
+    #print(dict2.items())
     for key, value in dict2.items():
+        print(key)
         # Iterate over each key-value pair in the 'fit_results' dictionary
         for fit_key, fit_value in value['fit_results'].items():
             # Check if the 'Center' value is within the window of dict1_value
             if abs(fit_value['Center'] - dict1_value) <= window:
                 # If it is, add the value of key_to_recover to the recovered values
-                recovered_values[fit_key] = fit_value.get(key_to_recover)
+                recovered_values[key] = fit_value.get(key_to_recover)
 
     return recovered_values
 
@@ -251,7 +252,7 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
 
     global selected_option, peaks,peaks_compare, peak_1_sel,peak_2_sel,peak_params,peak_params_sel
     
-    print(dictionary.items())
+    
 
     def on_closing():
         """
@@ -363,25 +364,25 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
     ###############################################################
     ###############################################################       
     # Creation of main panel elements
-    main_panel = tk.Frame(main_window, bg='white', width=1000, height=500)
+    main_panel = tk.Frame(main_window, bg='white')
     main_panel.grid(row=0, column=0, padx=1, pady=1, sticky='nsew')
-  
-
-
-    # Create subpanel frames within the main panel
-    subpanel1 = tk.Frame(main_panel, bg='lightblue')
-    subpanel2 = tk.Frame(main_panel, bg='lightgrey')
-
+    
     # Grid layout configuration
     main_panel.grid_columnconfigure(0, weight=1)
     main_panel.grid_rowconfigure(0, weight=1)
     main_panel.grid_rowconfigure(1, weight=1)
+
+
+    # Create subpanel frames within the main panel
+    subpanel1 = tk.Frame(main_panel, bg='lightblue')
+    subpanel2 = tk.Frame(main_panel, bg='lightgrey')   
 
     # Grid placement of subpanel frames
     subpanel1.grid(row=0, column=0, padx=10, pady=10, sticky='nsew')
     # Subpanel 1
     subpanel1.grid_rowconfigure(0, weight=1)  # Configure row weight
     subpanel1.grid_columnconfigure(0, weight=1)  # Configure column weight
+    #subpanel1.grid_columnconfigure(1, weight=1)  # Configure column weight
 
     subpanel2.grid(row=1, column=0, padx=10, pady=10, sticky='nsew')
     # Subpanel 2
@@ -396,18 +397,20 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
     style = ttk.Style()
     style.configure("Box.TLabel", background=main_window["background"])
 
-    box_frame = ttk.Frame(subpanel1, borderwidth=1, relief="groove")
+    box_frame = ttk.Frame(subpanel1, borderwidth=1)
     box_frame.grid(row=1, column=0, padx=10, pady=10, sticky='nsew')
     # Configure box_frame to expand in both directions
     box_frame.grid_rowconfigure(0, weight=1)
     box_frame.grid_columnconfigure(0, weight=1)
+    box_frame.grid_columnconfigure(1, weight=1)
 
     # Create a new frame as a container for frame1 and the scrollbar
-    container_frame = ttk.Frame(box_frame, borderwidth=1, relief="groove")
+    container_frame = ttk.Frame(box_frame, borderwidth=1)
     container_frame.grid(row=0, column=0, padx=10, pady=10, sticky='nsew')
 
     # Configure container_frame to expand in both directions
     container_frame.grid_rowconfigure(0, weight=1)
+    container_frame.grid_rowconfigure(1, weight=1)
     container_frame.grid_columnconfigure(0, weight=1)
 
     # Create a canvas widget inside the container frame
@@ -439,7 +442,7 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
     frame1.grid_columnconfigure(0, weight=1)
 
     canvas_1.create_window(
-        (0, 0), window=frame1, anchor="nw", tags="frame1")
+        (0, 0), window=frame1, anchor="nw", tags="frame1",width=450)
     #Add text widge to show fit info:
     text_widget = tk.Text(frame1, padx=2, pady=2, wrap="none")
     text_widget.tag_configure("bold", font=("TkDefaultFont", 11, "bold"))
@@ -455,6 +458,7 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
  
     frame2 = ttk.Frame(box_frame, borderwidth=2, relief="groove")    
     frame2.grid(row=0, column=1, padx=10, pady=10, sticky='nsew')   
+    frame2.grid_columnconfigure(0, weight=1)
     # dropdown to select the file:
     selected_option = FilteredListbox(frame2, dictionary, 0,0)
     button_fit = tk.Button(frame2, text='Show fit', command=fit_display)
@@ -463,28 +467,28 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
     ### Subpanel 2                                              ###
     ###############################################################
    
-    box_frame = ttk.Frame(subpanel2, borderwidth=1, relief="groove")
-    box_frame.grid(row=0, column=0, padx=10, pady=10, sticky='nsew')
-    # Configure box_frame to expand in both directions
-    box_frame.grid_rowconfigure(0, weight=1)
-    box_frame.grid_columnconfigure(0, weight=1)
-
     box_frame2 = ttk.Frame(subpanel2, borderwidth=1, relief="groove")
-    box_frame2.grid(row=0, column=1, padx=10, pady=10, sticky='nsew')
+    box_frame2.grid(row=0, column=0, padx=10, pady=10, sticky='nsew')
     # Configure box_frame to expand in both directions
     box_frame2.grid_rowconfigure(0, weight=1)
     box_frame2.grid_columnconfigure(0, weight=1)
 
-    
     box_frame3 = ttk.Frame(subpanel2, borderwidth=1, relief="groove")
-    box_frame3.grid(row=1, column=0, padx=10, pady=10, sticky='nsew')
+    box_frame3.grid(row=0, column=1, padx=10, pady=10, sticky='nsew')
     # Configure box_frame to expand in both directions
     box_frame3.grid_rowconfigure(0, weight=1)
     box_frame3.grid_columnconfigure(0, weight=1)
 
+    
+    box_frame4 = ttk.Frame(subpanel2, borderwidth=1, relief="groove")
+    box_frame4.grid(row=1, column=0, padx=10, pady=10, sticky='nsew')
+    # Configure box_frame to expand in both directions
+    box_frame4.grid_rowconfigure(0, weight=1)
+    box_frame4.grid_columnconfigure(0, weight=1)
+
     ### Box frame
-    tk.Label(box_frame, text="Spectral peak window").grid(row=0)
-    window_width = tk.Entry(box_frame)
+    tk.Label(box_frame2, text="Spectral peak window").grid(row=0)
+    window_width = tk.Entry(box_frame2)
     window_width.insert(0, "5.0")
     window_width.grid(row=1, column=0)
 
@@ -494,19 +498,19 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
 
     peak_params=extract_keys(dictionary)
 
-    window_update = tk.Button(box_frame, text='Update', command=update_window)
+    window_update = tk.Button(box_frame2, text='Update', command=update_window)
     window_update.grid(row=1, column=1, padx=10, pady=10)
 
      ### Box frame2
-    tk.Label(box_frame2, text="Peak:").grid(row=0,column=0)
-    peak_1_sel = create_dropdown(box_frame2, peaks,1,0)
-    tk.Label(box_frame2, text="Parameter:").grid(row=0,column=1)
-    peak_params_sel = create_dropdown(box_frame2, peak_params,1,1)    
-    tk.Label(box_frame2, text="Normalise by:").grid(row=0,column=2)
-    peak_2_sel = create_dropdown(box_frame2, peaks_compare,1,2)
+    tk.Label(box_frame3, text="Peak:").grid(row=0,column=0)
+    peak_1_sel = create_dropdown(box_frame3, peaks,1,0)
+    tk.Label(box_frame3, text="Parameter:").grid(row=0,column=1)
+    peak_params_sel = create_dropdown(box_frame3, peak_params,1,1)    
+    tk.Label(box_frame3, text="Normalise by:").grid(row=0,column=2)
+    peak_2_sel = create_dropdown(box_frame3, peaks_compare,1,2)
 
     ### Box frame3
-    postpro_tab = ttk.Notebook(box_frame3)
+    postpro_tab = ttk.Notebook(box_frame4)
     postpro_tab.grid(row=0, column=0, padx=10, pady=2, sticky='nsew')
     tab1 = ttk.Frame(postpro_tab)
     tab2 = ttk.Frame(postpro_tab)
@@ -519,8 +523,12 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
     tab2.grid_columnconfigure(0, weight=4)
 
     ## Tab_1
-    foo = tk.Button(tab1, text='Update', command=show_value)
-    foo.grid(row=1, column=1, padx=10, pady=10)
+    tk.Label(tab1, text="Inner Parameter").grid(row=0,column=0)
+    peak_inner = create_dropdown(tab1, peaks,1,0)
+    tk.Label(box_frame3, text="Parameter:").grid(row=0,column=1)
+    peak_inner_param = create_dropdown(tab1, peak_params,1,1)    
+    plot_inner = tk.Button(tab1, text='Update', command=show_value)
+    plot_inner.grid(row=2, column=1, padx=10, pady=10)
    
 
 
