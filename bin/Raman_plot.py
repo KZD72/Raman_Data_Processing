@@ -104,13 +104,15 @@ def create_dropdown(master, dictionary, row, column):
     dropdown.grid(row=row, column=column, padx=10, pady=10, sticky='nsew')  # Place the dropdown at the specified row and column
     return var  # Return the variable so you can get the selected option later
 
-def plotter(data_list, labels, title, error=None, lines=None, symbols=None, leyends=None, size=None, res=None, arrow=None, text=None, leyend_frame=[False, False]):
+def plotter(data_list, labels, title, error=None, lines=True, leyends=None, size=None, res=None, arrow=None, text=None, leyend_frame=[False, False]):
 
     # Edit the style
     local_path = os.path.dirname(os.path.abspath(__file__))
     style_file = os.path.join(local_path, 'plotstyle.mplstyle')  # APS style
     plt.style.use(style_file)
     line_type = ['-', '--', ':']  # intial dashlines
+    
+    marker_type = ['o', '^', 'v', '<', '>','s', 'd', 'p', 'h', '*']
 
     data = np.array(data_list, dtype=object)
     # Get the default color cycle from matplotlib
@@ -158,10 +160,14 @@ def plotter(data_list, labels, title, error=None, lines=None, symbols=None, leye
             colour_iter = iterator
         else:
             colour_iter = len(differentiated_colors)-1
-
-        ax.errorbar(data[iterator][0], data[iterator][1], fmt=line_type[line_iter],
-                    color=differentiated_colors[colour_iter], label=leyends[iterator],
-                    linewidth=line_thick)  # Increase line thickness to 2.0)
+        if lines:
+            ax.errorbar(data[iterator][0], data[iterator][1], fmt=line_type[line_iter],
+                        color=differentiated_colors[colour_iter], label=leyends[iterator],
+                        linewidth=line_thick)  # Increase line thickness to 2.0)
+        else:
+            ax.errorbar(data[iterator][0], data[iterator][1], fmt=marker_type[line_iter],
+                        color=differentiated_colors[colour_iter], label=leyends[iterator],
+                        linewidth=line_thick)  # Increase line thickness to 2.0)
 
     # Set plot properties
     ax.set_xlabel(labels[0])

@@ -33,6 +33,7 @@ from tkinter import messagebox
 import os
 import scipy.integrate as spi
 import csv
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from bin import Raman_dataloader
 from bin import Raman_fit
@@ -235,22 +236,114 @@ def recover_values(dict1_value, dict2, window, key_to_recover):
     recovered_values = {}
 
     # Iterate over each key-value pair in dict2
-    #print(dict2.items())
     for key, value in dict2.items():
-        print(key)
         # Iterate over each key-value pair in the 'fit_results' dictionary
+        # Flag to indicate if a peak has been found
+        peak_found = False
+        
         for fit_key, fit_value in value['fit_results'].items():
             # Check if the 'Center' value is within the window of dict1_value
-            if abs(fit_value['Center'] - dict1_value) <= window:
-                # If it is, add the value of key_to_recover to the recovered values
-                recovered_values[key] = fit_value.get(key_to_recover)
+          
+            if abs(float(fit_value['Center']) - float(dict1_value)) <= window:
+                if not peak_found:
+                    # If a peak has not been found yet, add the value of key_to_recover to the recovered values
+                    recovered_values[key] = fit_value.get(key_to_recover)
+                    peak_found = True
+                    
+                else:
+                    # If a peak has already been found, issue a warning
+                    error(f"Warning: More than one peak detected in the window for key {key}.")
+                    recovered_values[key] = np.nan
+                    
+            
+            if not key in recovered_values: 
+                recovered_values[key] = np.nan
+                
 
-    return recovered_values
+    return recovered_values, peak_found
+
+def create_range(range_type, start, end, n):
+    """
+    Creates a range of values based on the specified type, start value, step size, and number of steps.
+
+    Parameters:
+    range_type (str): The type of range to create. Options are 'Linear', 'Logarithmic (base 10)', 'Logarithmic (base e)', and 'Exponential'.
+    start (float): The start value of the range.
+    step (float): The step size between values in the range.
+    n (int): The number of steps to generate in the range.
+
+    Returns:
+    numpy.ndarray: A numpy array containing the generated range of values.
+    """
+    key=True
+   
+    if end<=start:
+        key=False
+    
+    if range_type == 'Linear':
+        try:
+    
+            values = np.linspace(start, end, num=n)
+        except:
+            key=False
+            values=np.array([])
+            error("Add a valid range")
+
+    elif range_type == 'Log (base 10)':
+        try:
+            values = np.logspace(np.log10(start), np.log10(end), num=n, base=10)
+        except:
+            key=False
+            values=np.array([])
+            error("Add a valid range")
+        
+    elif range_type == 'Ln (base e)':
+        try:
+            values = np.logspace(np.log(start), np.log(end), num=n, base=np.e)
+        except:
+            key=False
+            values=np.array([])
+            error("Add a valid range")
+        
+    else:  # Exponential
+        try:
+            values = np.exp(np.linspace(np.log(start), np.log(end), num=n))
+        except:
+            key=False
+            values=np.array([])
+            error("Add a valid range")
+        
+    return values, key
+
+def get_nan_indices(y_list):
+    """
+    Get the indices of NaN values in a list.
+
+    Parameters:
+    y_list (list): The list to check for NaN values.
+
+    Returns:
+    list: A list of indices where y_list is NaN.
+    """
+    # Convert the list to a numpy array
+    y_array = np.array(y_list)
+
+    # Get a boolean array that is True where y_array is NaN
+    is_nan = np.isnan(y_array)
+
+    # Get the indices where y_array is NaN
+    nan_indices = np.where(is_nan)[0]
+
+    return nan_indices.tolist()
 
 ###############################################################################
 def create_dashboard(main_window, canvas, canvas_panel, dictionary):
 
-    global selected_option, peaks,peaks_compare, peak_1_sel,peak_2_sel,peak_params,peak_params_sel
+    global selected_option, peaks,peaks_compare
+    global peak_1_sel,peak_2_sel,peak_params,peak_params_sel
+    global peak_1_sel_inner,peak_3_sel,window_width
+    global custom_list_type
+    global custom_list_type, start_entry, step_entry
     
     
 
@@ -344,18 +437,132 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
                 peaks=extract_peaks(dictionary,float(window_width.get()))        
                 peaks_compare={"None": 1}
                 peaks_compare.update(peaks)
-                peak_1_sel = create_dropdown(box_frame2, peaks,1,0)
-                peak_params_sel = create_dropdown(box_frame2, peak_params,1,1)    
-                peak_2_sel = create_dropdown(box_frame2, peaks_compare,1,2)
+                peak_1_sel = create_dropdown(box_frame3, peaks,1,0)
+                peak_params_sel = create_dropdown(box_frame3, peak_params,1,1)    
+                peak_2_sel = create_dropdown(box_frame3, peaks_compare,1,2)
+
             else:
                 error("Field must be a valid number [1,100]")
         except:
             error("Field must be a valid number [1,100]")
 
-    def show_value():
+    def show_inner_plot():
         global peaks,peaks_compare,peak_1_sel,peak_2_sel,peak_params,peak_params_sel
+        global peak_1_sel_inner,peak_3_sel,peak_2_sel
+        
+        
+        inner_x, flag2=recover_values(peaks[peak_3_sel.get()], dictionary, float(window_width.get()), peak_1_sel_inner.get())
+        inner_y, flag=recover_values(peaks[peak_1_sel.get()], dictionary, float(window_width.get()), peak_params_sel.get())
+      
+        if peak_2_sel.get()=="None":
+            inner_y_norm={key: 1 for key in inner_y.keys()}
+        else:
+            inner_y_norm,flag3=recover_values(peaks[peak_2_sel.get()], dictionary, float(window_width.get()), peak_params_sel.get())
+          
+        
+        inner_x_list=list(inner_x.values())
+        nan_indices_x = get_nan_indices(inner_x_list)
+        inner_y_list=list(inner_y.values())
+        nan_indices_y = get_nan_indices(inner_y_list)
+        inner_y_norm_list=list(inner_y_norm.values())
+        nan_indices_y_norm = get_nan_indices(inner_y_norm_list)
+       
+        
+        filtered_y_list = [inner_y_list[i]/inner_y_norm_list[i]
+                            for i in range(len(inner_y_list))
+                              if i not in nan_indices_y
+                                and i not in nan_indices_x
+                                  and i not in nan_indices_y_norm]
+        filtered_x_list = [inner_x_list[i] 
+                           for i in range(len(inner_x_list))
+                               if i not in nan_indices_y
+                                and i not in nan_indices_x
+                                  and i not in nan_indices_y_norm]
+
+        plots_to_show=[[filtered_x_list,filtered_y_list]]
+
+        fig, ax = Raman_plot.plotter(plots_to_show,
+                                            [peak_params_sel.get(),
+                                             peak_1_sel_inner.get()],
+                                            peak_params_sel.get(),                                            
+                                            lines=False,
+                                            res=150,
+                                            leyends=peak_params_sel.get(),
+                                            leyend_frame=[True, 'b']
+                                            )
+        Raman_plot.update_plot(canvas, canvas_panel,
+                                    fig, ax, plots_to_show)
+        
+    def show_outer_plot():
+     
+        global custom_list_type, start_entry, step_entry
+        global peaks,peak_1_sel,window_width,peak_params_sel,peak_2_sel
+
+        inner_y, flag=recover_values(peaks[peak_1_sel.get()], dictionary, float(window_width.get()), peak_params_sel.get())
+        x_list,key=create_range(custom_list_type.get(), float(start_entry.get()), float(step_entry.get()), len(inner_y))
     
-        print(recover_values(peaks[peak_1_sel.get()], dictionary, float(window_width.get()), peak_params_sel.get()))
+       
+        if key:
+            
+            if peak_2_sel.get()=="None":
+                inner_y_norm={key: 1 for key in inner_y.keys()}
+            else:
+                inner_y_norm,flag3=recover_values(peaks[peak_2_sel.get()], dictionary, float(window_width.get()), peak_params_sel.get())
+            
+            
+            inner_y_list=list(inner_y.values())
+            nan_indices_y = get_nan_indices(inner_y_list)
+            inner_y_norm_list=list(inner_y_norm.values())
+            nan_indices_y_norm = get_nan_indices(inner_y_norm_list)
+        
+            
+        
+            
+            filtered_y_list = [inner_y_list[i]/inner_y_norm_list[i]
+                                for i in range(len(inner_y_list))
+                                if i not in nan_indices_y                               
+                                    and i not in nan_indices_y_norm]
+            
+            filtered_x_list = [x_list[i]
+                                for i in range(len(x_list))
+                                if i not in nan_indices_y                               
+                                    and i not in nan_indices_y_norm]
+            
+
+            plots_to_show=[[filtered_x_list,filtered_y_list]]
+
+            fig, ax = Raman_plot.plotter(plots_to_show,
+                                                [peak_params_sel.get(),
+                                                peak_1_sel_inner.get()],
+                                                peak_params_sel.get(),                                            
+                                                lines=False,
+                                                res=150,
+                                                size="double_height",
+                                                leyends=peak_params_sel.get(),
+                                                leyend_frame=[True, 'b']
+                                                )
+            
+             # Create a new Toplevel window
+            window = tk.Toplevel(main_window)
+            window.title('Dahsboard graph')
+            #window.geometry("800x800")
+            window.resizable(False, False)  # Disable resizing
+
+            # Create a new canvas and add it to the new window
+            new_canvas_panel = ttk.Frame(window)
+            new_canvas_panel.grid(row=0, column=0, sticky="nsew")
+            new_canvas_panel.rowconfigure(0, weight=1)
+            new_canvas_panel.columnconfigure(0, weight=1)
+
+            # Area for the figure:
+            # Create the initial graph
+            new_canvas = FigureCanvasTkAgg(fig, master=new_canvas_panel)
+            new_canvas.draw()
+            new_canvas.get_tk_widget().grid(row=0, column=0, sticky="nsew")
+           
+            # Update the plot on the new canvas
+            Raman_plot.update_plot(new_canvas, new_canvas_panel, fig, ax, plots_to_show)
+            
 
 
     ###############################################################
@@ -481,7 +688,7 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
 
     
     box_frame4 = ttk.Frame(subpanel2, borderwidth=1, relief="groove")
-    box_frame4.grid(row=1, column=0, padx=10, pady=10, sticky='nsew')
+    box_frame4.grid(row=1, column=1, padx=10, pady=10, sticky='nsew')
     # Configure box_frame to expand in both directions
     box_frame4.grid_rowconfigure(0, weight=1)
     box_frame4.grid_columnconfigure(0, weight=1)
@@ -514,20 +721,56 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
     postpro_tab.grid(row=0, column=0, padx=10, pady=2, sticky='nsew')
     tab1 = ttk.Frame(postpro_tab)
     tab2 = ttk.Frame(postpro_tab)
-    postpro_tab.add(tab1, text="Inner data")
-    postpro_tab.add(tab2, text="External data")
+    postpro_tab.add(tab1, text="External data")
+    postpro_tab.add(tab2,text="Inner data")
     #postpro_tab.bind("<<NotebookTabChanged>>", clean_external)
-    tab1.grid_columnconfigure(0, weight=4)
-    tab1.grid_columnconfigure(1, weight=2)
-    tab2.grid_columnconfigure(3, weight=6)
-    tab2.grid_columnconfigure(0, weight=4)
+    tab1.grid_columnconfigure(0, weight=1)
+    tab1.grid_columnconfigure(1, weight=1)
+    tab2.grid_columnconfigure(0, weight=1)
+    tab2.grid_columnconfigure(1, weight=1)
 
     ## Tab_1
-    tk.Label(tab1, text="Inner Parameter").grid(row=0,column=0)
-    peak_inner = create_dropdown(tab1, peaks,1,0)
-    tk.Label(box_frame3, text="Parameter:").grid(row=0,column=1)
-    peak_inner_param = create_dropdown(tab1, peak_params,1,1)    
-    plot_inner = tk.Button(tab1, text='Update', command=show_value)
+    ### SubTab1    
+    subtab1_notebook=ttk.Notebook(tab1)
+    subtab1_notebook.grid(row=0,column=0)
+    subtab1 = ttk.Frame(subtab1_notebook)
+    subtab1_notebook.add(subtab1, text='Predefined x')
+    box_frame_subtab1 = ttk.Frame(subtab1, borderwidth=1, relief="groove")
+    box_frame_subtab1 .grid(row=0, column=0, padx=1, pady=1, sticky='nsew')
+    box_frame_subtab2 = ttk.Frame(subtab1, borderwidth=1, relief="groove")
+    box_frame_subtab2 .grid(row=0, column=1, padx=1, pady=1, sticky='nsew')
+    custom_list_type= tk.StringVar(value='Linear')
+    item_custom_list=0
+    for text in ['Linear', 'Log (base 10)', 'Ln (base e)', 'Exponential']:
+        custom_list_type_var = tk.Radiobutton(box_frame_subtab1, text=text, variable=custom_list_type, value=text)
+        custom_list_type_var.grid(row=item_custom_list,column=0,sticky='nw')
+        item_custom_list+=1
+
+    start_label = tk.Label(box_frame_subtab2, text="Start:")
+    start_label.grid(row=0,column=0,sticky='nw')
+    start_entry = tk.Entry(box_frame_subtab2)
+    start_entry.grid(row=1,column=0,sticky='ne')
+    start_entry.insert(0, '1')  # Set default start value to 1
+
+    step_label = tk.Label(box_frame_subtab2, text="End:")
+    step_label.grid(row=2,column=0,sticky='nw')
+    step_entry = tk.Entry(box_frame_subtab2)
+    step_entry.grid(row=3,column=0,sticky='ne')
+    step_entry.insert(0, '10')  # Set default start value to 1
+
+    create_button = tk.Button(box_frame_subtab2, text="Create Range", command=show_outer_plot)
+    create_button.grid(row=4,column=0,sticky='ne')
+
+    ### SubTab1 
+    subtab2 = ttk.Frame(subtab1_notebook)
+    subtab1_notebook.add(subtab2, text='Upload data for x')
+
+     ## Tab_2
+    tk.Label(tab2, text="Inner Parameter:").grid(row=0,column=0)
+    peak_3_sel = create_dropdown(tab2, peaks,1,0)
+    tk.Label(tab2, text="Parameter:").grid(row=0,column=1)
+    peak_1_sel_inner= create_dropdown(tab2, peak_params,1,1)    
+    plot_inner = tk.Button(tab2, text='Update', command=show_inner_plot)
     plot_inner.grid(row=2, column=1, padx=10, pady=10)
    
 
