@@ -1145,11 +1145,11 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
         global dict_container
         dashboard_window = tk.Toplevel(main_window)
         dashboard_window.title('Batch peak analizer dahsboard')
-        dashboard_window.geometry("755x900")
+        dashboard_window.geometry("850x800")
         dashboard_window.resizable(False, False)  # Disable resizing
         Raman_single_peak_fit_dashboard.create_dashboard(dashboard_window, canvas, canvas_panel, dict_container)
      ###########################################################################
-     ##### Main laterla panel definition                                    ####
+     ##### Main lateral panel definition                                    ####
      ###########################################################################
 
     main_panel = tk.Frame(main_window, bg='white')
@@ -1193,18 +1193,31 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
 
     box_frame = ttk.Frame(subpanel1, borderwidth=1, relief="groove")
     box_frame.grid(row=1, column=0, padx=10, pady=2, sticky='nsew')
-
-    # First child frame
-    frame1 = ttk.Frame(box_frame, borderwidth=2, relief="groove")
-    frame1.grid(row=1, column=0, padx=10, pady=2)
-
-    # Second child frame
-    frame2 = ttk.Frame(box_frame, borderwidth=2, relief="groove")
-    frame2.grid(row=1, column=1, padx=10, pady=2)
-    # Configure column weights of the box_frame
+    
+      # Configure column weights of the box_frame
     box_frame.grid_columnconfigure(0, weight=1)
     box_frame.grid_columnconfigure(1, weight=1)
     # Add elements to each subpanel
+
+   
+    # Create the tabs 
+    range_tab = ttk.Notebook(box_frame)
+    range_tab.grid(row=0, column=0, padx=10, pady=2, sticky='nsew')
+    tab0 = ttk.Frame(range_tab)
+    tab01 = ttk.Frame(range_tab)
+    range_tab.add(tab0, text="Simple ROI")
+    range_tab.add(tab01, text="Segmented ROI")
+    
+    ### TAB0
+    
+     # First child frame
+    frame1 = ttk.Frame(tab0, borderwidth=2, relief="groove")
+    frame1.grid(row=1, column=0, padx=10, pady=2)
+
+    # Second child frame
+    frame2 = ttk.Frame(tab0, borderwidth=2, relief="groove")
+    frame2.grid(row=1, column=1, padx=10, pady=2)
+  
 
     # area to create the fields
     label_fields =  tk.Label(subpanel1, text="Select the spectral range:")
@@ -1244,9 +1257,13 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
     spectral_window[1] = float(field_upp_k.get())
     check_spectral_window(initial_spectral_window, spectral_window)
 
-    button_clipper = tk.Button(subpanel1, text='Clip data',
+    button_clipper = tk.Button(tab0, text='Clip data',
                                command=button_clipper_clicked)
-    button_clipper.grid(row=2, column=0, padx=10, pady=2)
+    button_clipper.grid(row=1, column=2, padx=10, pady=2)
+    
+    
+    ### TAB01
+    
 
     ###########################################################################
     ##### Sub panel 2                                                      ####
