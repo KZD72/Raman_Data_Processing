@@ -28,7 +28,7 @@ import tkinter as tk
 import numpy as np
 import time
 import re
-from tkinter import ttk
+from tkinter import ttk, filedialog
 from tkinter import messagebox
 import os
 import scipy.integrate as spi
@@ -290,24 +290,10 @@ def create_range(range_type, start, end, n):
             error("Add a valid range")
 
     elif range_type == 'Log (base 10)':
-        try:
+        try:            
             values = np.logspace(np.log10(start), np.log10(end), num=n, base=10)
-        except:
-            key=False
-            values=np.array([])
-            error("Add a valid range")
-        
-    elif range_type == 'Ln (base e)':
-        try:
-            values = np.logspace(np.log(start), np.log(end), num=n, base=np.e)
-        except:
-            key=False
-            values=np.array([])
-            error("Add a valid range")
-        
-    else:  # Exponential
-        try:
-            values = np.exp(np.linspace(np.log(start), np.log(end), num=n))
+            print("log 10 val")
+            print(values)
         except:
             key=False
             values=np.array([])
@@ -490,16 +476,47 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
                                             leyends=peak_params_sel.get(),
                                             leyend_frame=[True, 'b']
                                             )
-        Raman_plot.update_plot(canvas, canvas_panel,
-                                    fig, ax, plots_to_show)
+        # Create a new Toplevel window
+        window = tk.Toplevel(main_window)
+        window.title('Dahsboard graph')
+        #window.geometry("800x800")
+        window.resizable(False, False)  # Disable resizing
+
+        # Create a new canvas and add it to the new window
+        new_canvas_panel = ttk.Frame(window)
+        new_canvas_panel.grid(row=0, column=0, sticky="nsew")
+        new_canvas_panel.rowconfigure(0, weight=1)
+        new_canvas_panel.columnconfigure(0, weight=1)
+
+        # Area for the figure:
+        # Create the initial graph
+        new_canvas = FigureCanvasTkAgg(fig, master=new_canvas_panel)
+        new_canvas.draw()
+        new_canvas.get_tk_widget().grid(row=0, column=0, sticky="nsew")
         
-    def show_outer_plot():
+        # Update the plot on the new canvas
+        Raman_plot.update_plot(new_canvas, new_canvas_panel, fig, ax, plots_to_show)
+    
+    def show_outer_plot(option=1):
      
         global custom_list_type, start_entry, step_entry
         global peaks,peak_1_sel,window_width,peak_params_sel,peak_2_sel
 
+        key=False
         inner_y, flag=recover_values(peaks[peak_1_sel.get()], dictionary, float(window_width.get()), peak_params_sel.get())
-        x_list,key=create_range(custom_list_type.get(), float(start_entry.get()), float(step_entry.get()), len(inner_y))
+        if option==1:
+            x_list,key=create_range(custom_list_type.get(), float(start_entry.get()), float(step_entry.get()), len(inner_y))
+        else:
+            filepath = filedialog.askopenfilename(filetypes=[("CSV Files", "*.csv"), (
+            "TXT Files", "*.txt")])
+            if filepath != '':
+                data = np.genfromtxt(filepath, dtype=float, delimiter=' ')
+                print(data.shape)
+            if data.ndim == 1 and len(data) == len(inner_y) and not np.any(np.isnan(data)):
+                key=True
+                x_list=data
+            else:
+                error("Imported file with wrong dimensions or non numerical entries")
     
        
         if key:
@@ -563,6 +580,11 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
             # Update the plot on the new canvas
             Raman_plot.update_plot(new_canvas, new_canvas_panel, fig, ax, plots_to_show)
             
+    def show_outer_plot_1():
+        show_outer_plot(option=1)      
+
+    def show_outer_plot_2():
+        show_outer_plot(option=2)
 
 
     ###############################################################
@@ -741,7 +763,7 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
     box_frame_subtab2 .grid(row=0, column=1, padx=1, pady=1, sticky='nsew')
     custom_list_type= tk.StringVar(value='Linear')
     item_custom_list=0
-    for text in ['Linear', 'Log (base 10)', 'Ln (base e)', 'Exponential']:
+    for text in ['Linear', 'Log (base 10)']:
         custom_list_type_var = tk.Radiobutton(box_frame_subtab1, text=text, variable=custom_list_type, value=text)
         custom_list_type_var.grid(row=item_custom_list,column=0,sticky='nw')
         item_custom_list+=1
@@ -758,12 +780,14 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
     step_entry.grid(row=3,column=0,sticky='ne')
     step_entry.insert(0, '10')  # Set default start value to 1
 
-    create_button = tk.Button(box_frame_subtab2, text="Create Range", command=show_outer_plot)
-    create_button.grid(row=4,column=0,sticky='ne')
+    outer_dat_button_1 = tk.Button(box_frame_subtab2, text="Create Range", command=show_outer_plot_1)
+    outer_dat_button_1.grid(row=4,column=0,sticky='ne')
 
-    ### SubTab1 
+    ### SubTab2
     subtab2 = ttk.Frame(subtab1_notebook)
     subtab1_notebook.add(subtab2, text='Upload data for x')
+    outer_dat_button_2 = tk.Button(subtab2, text="Create Range", command=show_outer_plot_2)
+    outer_dat_button_2.grid(row=0,column=0,sticky='nw')
 
      ## Tab_2
     tk.Label(tab2, text="Inner Parameter:").grid(row=0,column=0)
