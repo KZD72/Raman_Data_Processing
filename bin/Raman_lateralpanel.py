@@ -1145,7 +1145,7 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
         global dict_container
         dashboard_window = tk.Toplevel(main_window)
         dashboard_window.title('Batch peak analizer dahsboard')
-        dashboard_window.geometry("850x800")
+        dashboard_window.geometry("773x815")
         dashboard_window.resizable(False, False)  # Disable resizing
         Raman_single_peak_fit_dashboard.create_dashboard(dashboard_window, canvas, canvas_panel, dict_container)
      ###########################################################################

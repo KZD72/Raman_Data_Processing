@@ -138,7 +138,10 @@ def plotter(data_list, labels, title, error=None, lines=True, leyends=None, size
             unit_conv(2*8.6), unit_conv(4*5)]  # APS style  two colums four rows
     elif size == "normal":
         plt.rcParams['figure.figsize'] = [
-            unit_conv(2*8.6), unit_conv(4*5)]  # APS single colums
+            unit_conv(8.6), unit_conv(5)]  # APS single colums
+    else:
+        plt.rcParams['figure.figsize'] = [
+            unit_conv(16), unit_conv(10)]  # APS single colums
 
     if res != None:
         plt.rcParams['figure.dpi'] = res  # APS style  

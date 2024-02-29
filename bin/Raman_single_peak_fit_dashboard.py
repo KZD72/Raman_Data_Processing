@@ -435,6 +435,23 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
     def show_inner_plot():
         global peaks,peaks_compare,peak_1_sel,peak_2_sel,peak_params,peak_params_sel
         global peak_1_sel_inner,peak_3_sel,peak_2_sel
+
+        def update_inner_plot():
+            if isinstance(x_label_entry.get(), str) and isinstance(y_label_entry.get(), str) and isinstance(title_entry.get(), str) :      
+            
+                fig, ax = Raman_plot.plotter(plots_to_show,
+                                                [x_label_entry.get(),
+                                                y_label_entry.get()],
+                                                title_entry.get(),                                            
+                                                lines=False,
+                                                res=150,
+                                                size="",
+                                                leyends=peak_params_sel.get(),
+                                                leyend_frame=[True, 'b']
+                                                )
+                Raman_plot.update_plot(new_canvas, new_canvas_panel, fig, ax, plots_to_show)
+            else:
+                error("Labels must be strings")
         
         
         inner_x, flag2=recover_values(peaks[peak_3_sel.get()], dictionary, float(window_width.get()), peak_1_sel_inner.get())
@@ -479,7 +496,7 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
         # Create a new Toplevel window
         window = tk.Toplevel(main_window)
         window.title('Dahsboard graph')
-        #window.geometry("800x800")
+                
         window.resizable(False, False)  # Disable resizing
 
         # Create a new canvas and add it to the new window
@@ -488,6 +505,7 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
         new_canvas_panel.rowconfigure(0, weight=1)
         new_canvas_panel.columnconfigure(0, weight=1)
 
+        
         # Area for the figure:
         # Create the initial graph
         new_canvas = FigureCanvasTkAgg(fig, master=new_canvas_panel)
@@ -496,11 +514,49 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
         
         # Update the plot on the new canvas
         Raman_plot.update_plot(new_canvas, new_canvas_panel, fig, ax, plots_to_show)
+
+            ## Area to introduce the custom inputs:
+        # Create a panel on the right side of the canvas
+        panel = ttk.Frame(window)
+        panel.grid(row=0, column=1, sticky="nsew")
+
+        # Create three entry fields in the panel
+        title_entry = ttk.Entry(panel)
+        title_entry.insert(0, "Enter title")
+        title_entry.grid(row=0, column=0, sticky="nsew")
+
+        x_label_entry = ttk.Entry(panel)
+        x_label_entry.insert(0, "Enter x-axis label")
+        x_label_entry.grid(row=1, column=0, sticky="nsew")
+
+        y_label_entry = ttk.Entry(panel)
+        y_label_entry.insert(0, "Enter y-axis label")
+        y_label_entry.grid(row=2, column=0, sticky="nsew")
+
+        update_plot = tk.Button(panel, text="Update", command=update_inner_plot)
+        update_plot.grid(row=3,column=0,sticky='ne')
     
     def show_outer_plot(option=1):
      
         global custom_list_type, start_entry, step_entry
         global peaks,peak_1_sel,window_width,peak_params_sel,peak_2_sel
+
+        def update_inner_plot():
+                if isinstance(x_label_entry.get(), str) and isinstance(y_label_entry.get(), str) and isinstance(title_entry.get(), str) :      
+                
+                    fig, ax = Raman_plot.plotter(plots_to_show,
+                                                    [x_label_entry.get(),
+                                                    y_label_entry.get()],
+                                                    title_entry.get(),                                            
+                                                    lines=False,
+                                                    res=150,
+                                                    size="",
+                                                    leyends=peak_params_sel.get(),
+                                                    leyend_frame=[True, 'b']
+                                                    )
+                    Raman_plot.update_plot(new_canvas, new_canvas_panel, fig, ax, plots_to_show)
+                else:
+                    error("Labels must be strings")
 
         key=False
         inner_y, flag=recover_values(peaks[peak_1_sel.get()], dictionary, float(window_width.get()), peak_params_sel.get())
@@ -554,7 +610,7 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
                                                 peak_params_sel.get(),                                            
                                                 lines=False,
                                                 res=150,
-                                                size="double_height",
+                                                size="",
                                                 leyends=peak_params_sel.get(),
                                                 leyend_frame=[True, 'b']
                                                 )
@@ -562,7 +618,7 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
              # Create a new Toplevel window
             window = tk.Toplevel(main_window)
             window.title('Dahsboard graph')
-            #window.geometry("800x800")
+                 
             window.resizable(False, False)  # Disable resizing
 
             # Create a new canvas and add it to the new window
@@ -571,6 +627,7 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
             new_canvas_panel.rowconfigure(0, weight=1)
             new_canvas_panel.columnconfigure(0, weight=1)
 
+           
             # Area for the figure:
             # Create the initial graph
             new_canvas = FigureCanvasTkAgg(fig, master=new_canvas_panel)
@@ -579,7 +636,29 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
            
             # Update the plot on the new canvas
             Raman_plot.update_plot(new_canvas, new_canvas_panel, fig, ax, plots_to_show)
+
+             ## Area to introduce the custom inputs:
+            # Create a panel on the right side of the canvas
+            panel = ttk.Frame(window)
+            panel.grid(row=0, column=1, sticky="nsew")
+
+            # Create three entry fields in the panel
+            title_entry = ttk.Entry(panel)
+            title_entry.insert(0, "Enter title")
+            title_entry.grid(row=0, column=0, sticky="nsew")
+
+            x_label_entry = ttk.Entry(panel)
+            x_label_entry.insert(0, "Enter x-axis label")
+            x_label_entry.grid(row=1, column=0, sticky="nsew")
+
+            y_label_entry = ttk.Entry(panel)
+            y_label_entry.insert(0, "Enter y-axis label")
+            y_label_entry.grid(row=2, column=0, sticky="nsew")
+
+            update_plot = tk.Button(panel, text="Update", command=update_inner_plot)
+            update_plot.grid(row=3,column=0,sticky='ne')
             
+     
     def show_outer_plot_1():
         show_outer_plot(option=1)      
 
@@ -625,7 +704,7 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
     # Create a style for the labels
     style = ttk.Style()
     style.configure("Box.TLabel", background=main_window["background"])
-
+    
     box_frame = ttk.Frame(subpanel1, borderwidth=1)
     box_frame.grid(row=1, column=0, padx=10, pady=10, sticky='nsew')
     # Configure box_frame to expand in both directions
@@ -695,25 +774,39 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
     ###############################################################
     ### Subpanel 2                                              ###
     ###############################################################
-   
-    box_frame2 = ttk.Frame(subpanel2, borderwidth=1, relief="groove")
-    box_frame2.grid(row=0, column=0, padx=10, pady=10, sticky='nsew')
+
+    box_frame2_m = ttk.Frame(subpanel2, borderwidth=1, relief="groove")
+    box_frame2_m.grid(row=0, column=0, padx=10, pady=10, sticky='nsew')
+    tk.Label(box_frame2_m, text="Select the magnitude for the y axis:").grid(row=0)
+    box_frame4_m = ttk.Frame(subpanel2, borderwidth=1, relief="groove")
+    box_frame4_m.grid(row=1, column=0, padx=10, pady=10, sticky='nsew')
+    box_frame4_m.grid_rowconfigure(0, weight=1)
+    box_frame4_m.grid_rowconfigure(1, weight=1)
+    box_frame4_m.grid_columnconfigure(0, weight=1)
+    box_frame4_m.grid_columnconfigure(1, weight=1)
+    tk.Label(box_frame4_m, text="Select the magnitude for the x axis:").grid(row=0,column=0)
+       
+    box_frame2 = ttk.Frame(box_frame2_m, borderwidth=1, relief="groove")
+    box_frame2.grid(row=1, column=0, padx=10, pady=10, sticky='nsew')
     # Configure box_frame to expand in both directions
     box_frame2.grid_rowconfigure(0, weight=1)
     box_frame2.grid_columnconfigure(0, weight=1)
 
-    box_frame3 = ttk.Frame(subpanel2, borderwidth=1, relief="groove")
-    box_frame3.grid(row=0, column=1, padx=10, pady=10, sticky='nsew')
+    box_frame3 = ttk.Frame(box_frame2_m, borderwidth=1, relief="groove")
+    box_frame3.grid(row=1, column=1, padx=10, pady=10, sticky='nsew')
     # Configure box_frame to expand in both directions
     box_frame3.grid_rowconfigure(0, weight=1)
     box_frame3.grid_columnconfigure(0, weight=1)
 
-    
-    box_frame4 = ttk.Frame(subpanel2, borderwidth=1, relief="groove")
+      
+    box_frame4 = ttk.Frame(box_frame4_m, borderwidth=1, relief="groove")
     box_frame4.grid(row=1, column=1, padx=10, pady=10, sticky='nsew')
     # Configure box_frame to expand in both directions
     box_frame4.grid_rowconfigure(0, weight=1)
     box_frame4.grid_columnconfigure(0, weight=1)
+  
+
+
 
     ### Box frame
     tk.Label(box_frame2, text="Spectral peak window").grid(row=0)
@@ -752,9 +845,10 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
     tab2.grid_columnconfigure(1, weight=1)
 
     ## Tab_1
+    tk.Label(tab1, text="Select type of data for x values:").grid(row=0,column=0)
     ### SubTab1    
     subtab1_notebook=ttk.Notebook(tab1)
-    subtab1_notebook.grid(row=0,column=0)
+    subtab1_notebook.grid(row=1,column=0)
     subtab1 = ttk.Frame(subtab1_notebook)
     subtab1_notebook.add(subtab1, text='Predefined x')
     box_frame_subtab1 = ttk.Frame(subtab1, borderwidth=1, relief="groove")
@@ -780,14 +874,14 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
     step_entry.grid(row=3,column=0,sticky='ne')
     step_entry.insert(0, '10')  # Set default start value to 1
 
-    outer_dat_button_1 = tk.Button(box_frame_subtab2, text="Create Range", command=show_outer_plot_1)
+    outer_dat_button_1 = tk.Button(box_frame_subtab2, text="Create range plot", command=show_outer_plot_1)
     outer_dat_button_1.grid(row=4,column=0,sticky='ne')
 
     ### SubTab2
     subtab2 = ttk.Frame(subtab1_notebook)
     subtab1_notebook.add(subtab2, text='Upload data for x')
-    outer_dat_button_2 = tk.Button(subtab2, text="Create Range", command=show_outer_plot_2)
-    outer_dat_button_2.grid(row=0,column=0,sticky='nw')
+    outer_dat_button_2 = tk.Button(subtab2, text="Load data and plot", command=show_outer_plot_2)
+    outer_dat_button_2.grid(row=0,column=1,sticky='e')
 
      ## Tab_2
     tk.Label(tab2, text="Inner Parameter:").grid(row=0,column=0)
