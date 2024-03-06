@@ -333,6 +333,7 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
     global dict_container
     global new_peak_entry
     global peak_finding_tab
+    global model_list
 
     raw_dat = raw_dat_a
     x_raw = raw_dat[:, 0]
@@ -355,6 +356,7 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
     normalise_check = False
     baseline_type = "Auto"
     dict_container={}
+    model_list=[]
 
     # Internal functions to clickbutton
 
@@ -903,7 +905,7 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
         secondary_window.mainloop()
 
     def button_peak_analizer_clicked():
-        global x_baseline, y_baseline, info, peak_value, peak_val
+        global x_baseline, y_baseline, info, peak_value, peak_val,model_list
 
         def on_closing():
             button_clipper.config(state="normal")
@@ -931,21 +933,10 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
         button_dashboard.config(state="disabled")
 
 
-        # Create window for fitting:
-        # Area to create the peak fittingwindow
-        fit_window = tk.Toplevel(main_window)
-        fit_window.title('Raman peak analizer')
-        fit_window.geometry("755x900")
-        fit_window.resizable(False, False)  # Disable resizing
-        fit_window.attributes("-topmost", True)
-        # Grid layout configuration
-        fit_window.grid_columnconfigure(0, weight=1)
-        fit_window.grid_rowconfigure(0, weight=1)
-        Raman_single_peak_fit_GUI.create_fit_panel(
-            fit_window, canvas, canvas_panel, info, x_baseline, y_baseline, peak_val)
-
-        fit_window.protocol("WM_DELETE_WINDOW", on_closing)
-        fit_window.mainloop()
+        
+        model_list=Raman_single_peak_fit_GUI.create_fit_panel(
+            main_window, canvas, canvas_panel, info, x_baseline, y_baseline, peak_val)
+        print(model_list)
 
     def button_manual_adding_clicked():
         global peak_val, peaks, new_peak_entry  
@@ -1011,6 +1002,7 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
             try:
                 check, key = Raman_dataloader.load_spectra_data(
                     os.path.join(directory, file), data_type, silent=False)
+
                 if key:
                     valid_files.append(os.path.join(directory, file))
                 else:
@@ -1100,25 +1092,44 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
                         try:
                             selected_tab = peak_finding_tab.tab(peak_finding_tab.select(), "text")
                             if selected_tab=="Auto":
-                                button_peak_detection_clicked(silent=False)
-                            else:
-                                 peak_val= peak_val
-                                 peaks=peaks
-                            try:
-                                dict_container.update(Raman_single_peak_fit_GUI.batch_fit(
-                                    canvas, canvas_panel, info, x_baseline, y_baseline, peak_val, file, silent=plotShow)
-                                )
-                                progress['value'] = (item+1) / len(valid_files) * 100                               
-                                elapsed_time = time.time() - start_time                                
-                                estimated_time = elapsed_time * (len(valid_files) - item)                                
-                                time_label['text'] = "{:.2f} % completed".format((item+1) / len(valid_files) * 100)+"\nEstimated time remaining:\n{:.2f} seconds".format(estimated_time)
+                                button_peak_detection_clicked(silent=False)                            
+                                try:
+                                    dict_container.update(Raman_single_peak_fit_GUI.batch_fit(
+                                        canvas, canvas_panel, info, x_baseline, y_baseline, peak_val, file, silent=plotShow)
+                                    )
+                                    progress['value'] = (item+1) / len(valid_files) * 100                               
+                                    elapsed_time = time.time() - start_time                                
+                                    estimated_time = elapsed_time * (len(valid_files) - item)                                
+                                    time_label['text'] = "{:.2f} % completed".format((item+1) / len(valid_files) * 100)+"\nEstimated time remaining:\n{:.2f} seconds".format(estimated_time)
+                                    
                                 
-                            
-                                root2.update()
-                                root2.update_idletasks()
-                            except:
-                                messagebox.showinfo(
-                                    "Error", f"{file} \nFit routine failed")
+                                    root2.update()
+                                    root2.update_idletasks()
+                                except:
+                                    messagebox.showinfo(
+                                        "Error", f"{file} \nFit routine failed")
+                            else:
+                                peak_val= peak_val
+                                peaks=peaks
+
+                                try:
+                                    if len(model_list)>0:
+                                        dict_container.update(Raman_single_peak_fit_GUI.batch_fit(
+                                            canvas, canvas_panel, info, x_baseline, y_baseline, peak_val, file,models=model_list,silent=plotShow)
+                                        )
+                                        progress['value'] = (item+1) / len(valid_files) * 100                               
+                                        elapsed_time = time.time() - start_time                                
+                                        estimated_time = elapsed_time * (len(valid_files) - item)                                
+                                        time_label['text'] = "{:.2f} % completed".format((item+1) / len(valid_files) * 100)+"\nEstimated time remaining:\n{:.2f} seconds".format(estimated_time)
+                                    
+                                        root2.update()
+                                        root2.update_idletasks()
+                                    else:
+                                         messagebox.showinfo(
+                                        "Error", f"{file} \nFit first one spectra in folder to select the peak type")
+                                except:
+                                    messagebox.showinfo(
+                                        "Error", f"{file} \nFit routine failed")
                         except:
                             messagebox.showinfo(
                                 "Error", f"{file} \nPeak finding failed")

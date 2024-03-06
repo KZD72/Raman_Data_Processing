@@ -173,10 +173,10 @@ def fano_f_not_normalised(x, a_1=0, a_2=1, q=1e10):
     gamma = a_2 / 2
     epsilon = (x - a_1) / gamma
 
-    fano_par=-1*q
+    fano_par=q
 
 
-    unscaled=((1-fano_par**2)-2*fano_par*epsilon)/(1+epsilon**2)
+    unscaled=1-(fano_par+epsilon)**2/(1+epsilon**2)
 
 
     return unscaled
