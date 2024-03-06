@@ -392,14 +392,15 @@ def extract_peak_info(text):
     return peak_info
 
 
-def batch_fit(canvas, canvas_panel, info, x, y, peaks, file_path, silent=False):
+def batch_fit(canvas, canvas_panel, info, x, y, peaks, file_path,models=[], silent=False):
     # Extract peak positions and models from UI elements
     np_peaks = np.asarray(peaks, dtype='float64')
     peak_positions = [np_peaks[i, 0] for i in range(len(np_peaks))]
 
     # Only Gauss-Lorentz for now
-    models = ['Gauss-Lorentz' for item in peak_positions]
-
+    if len(models)!=len(peak_positions):
+        models = ['Gauss-Lorentz' for item in peak_positions]
+  
     # Find the index corresponding to each peak position
     index = [np.searchsorted(np.asarray(x, dtype='float64'), peak)
              for peak in peak_positions]
@@ -502,14 +503,18 @@ def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks):
     formated_info = "None"
     dialog = None
 
-    def on_closing():
+    def on_close():
         """
         Handles the closing event of the main window.
         Performs necessary cleanup actions before closing the application.
         """
-        main_window.quit()  # Quit the main window event loop
-        main_window.destroy()  # Destroy the main window
+        global model_list
+        fit_window.quit()  # Quit the main window event loop
+        fit_window.destroy()  # Destroy the main window
+        
 
+
+        
     def field_creator(frame, position, peak, peak_label):
         """
        Creates and configures a set of UI elements for displaying and editing a peak.
@@ -680,6 +685,7 @@ def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks):
             button_fit_info.config(state="normal")
             button_fit_info_save.config(state="normal")
             button_postpro.config(state="normal")
+            return model_list
         else:
             error("Introduce a valid number")
 
@@ -804,8 +810,23 @@ def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks):
         text_to_save = text_widget_2.get("1.0", "end-1c")
         save_text(text_to_save)
 
+    #####################################################################
+    ####                Create window for fitting:                    ###
+    #####################################################################
+    # Area to create the peak fittingwindow
+    fit_window = tk.Toplevel(main_window)
+    fit_window.title('Raman peak analizer')
+    fit_window.geometry("755x900")
+    fit_window.resizable(False, False)  # Disable resizing
+    fit_window.attributes("-topmost", True)
+    fit_window.protocol("WM_DELETE_WINDOW", on_close)
+
+    # Grid layout configuration
+    fit_window.grid_columnconfigure(0, weight=1)
+    fit_window.grid_rowconfigure(0, weight=1)
+
    # Creation of main panel elements
-    main_panel = tk.Frame(main_window, bg='white')
+    main_panel = tk.Frame(fit_window, bg='white')
     main_panel.grid(row=0, column=0, padx=10, pady=10, sticky='nsew')
 
     # Grid layout configuration

@@ -398,10 +398,10 @@ def update_plot(canvas, canvas_panel, fig, ax, data):
 
         confirm_button = tk.Button(window, text="Confirm", command=confirm)
         confirm_button.grid(row=3, column=0, padx=10, pady=10, sticky='nsew')
-
+    
 
    # Define the button styles
-        
+           
     button_style = {
         'background': '#4caf50',
         'foreground': 'white',
@@ -436,6 +436,8 @@ def update_plot(canvas, canvas_panel, fig, ax, data):
     save_button = tk.Button(toolbar,
                             text='Save current data', command=save_text, **button_style_2)
     save_button.pack(side=tk.LEFT)
+
+    
 
     return fig
 
