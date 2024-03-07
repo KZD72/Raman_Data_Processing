@@ -334,6 +334,7 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
     global new_peak_entry
     global peak_finding_tab
     global model_list
+    global field_shift
 
     raw_dat = raw_dat_a
     x_raw = raw_dat[:, 0]
@@ -650,6 +651,43 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
         if c1 and c2:
             raw_x, raw_y = data_clipper(raw_dat, spectral_window)
             update_baseline(raw_x, raw_y, bas_man_points, model_type)
+
+    def button_shift_clicked(silent=True):
+        global x_baseline, y_baseline,field_low_k, field_upp_k, raw_dat, field_shift, baseline_type 
+        c1 = check_spectral_window(initial_spectral_window, [
+                                    field_low_k.get(), field_upp_k.get()])
+        c2 = float(field_shift.get())>-1e6 and float(field_shift.get())<1e6
+        if c1 and c2:
+            raw_x, raw_y = data_clipper(raw_dat, spectral_window)
+            x_baseline=raw_x
+            y_baseline=raw_y-float(field_shift.get())
+            baseline_type = "Shift"
+            if silent:
+                dat = [[raw_x, raw_y], [raw_x, [float(field_shift.get()) for item in raw_x]]]
+                
+                fig, ax = Raman_plot.plotter(dat,
+                                            ["Wavenumber (1/cm)",
+                                            "Intensity (A.U.)"],
+                                            info['Title'],
+                                            leyends=['Raw data', 'Baseline'],
+                                            lines=True,
+                                            res=150,
+                                            # size="double_size_double_heigh",
+                                            leyend_frame=[True, 'b'],
+                                            )
+                Raman_plot.update_plot(canvas, canvas_panel, fig, ax, dat)
+
+                button_substract_baseline.config(state="normal")
+                button_peak_detection.config(state="disabled")
+                button_manual_peak_adding.config(state="disabled")
+                button_peak_processing.config(state="disabled")
+                button_load_batch_folder.config(state="disabled")
+                button_batch.config(state="disabled")
+                button_dashboard.config(state="disabled")
+        else:
+            error("Please type a valid number [-1e6-1e6] and check the clipping window")
+
+
 
     def button_baseline_removed_clicked(silent=True):
         global x_baseline, y_baseline, info
@@ -1062,6 +1100,8 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
                 try:
                     if baseline_type == "Auto":
                         button_baseline_clicked(silent=False)
+                    elif baseline_type == "Shift":
+                        button_shift_clicked(silent=False)
                     else:
                         raw_x, raw_y = data_clipper(raw_dat, spectral_window)
                         # Look for the datapoints in ech set of data:
@@ -1307,8 +1347,10 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
     baseline_tab.grid(row=0, column=0, padx=10, pady=2, sticky='nsew')
     tab1 = ttk.Frame(baseline_tab)
     tab2 = ttk.Frame(baseline_tab)
+    tab2b = ttk.Frame(baseline_tab)
     baseline_tab.add(tab1, text="Auto")
     baseline_tab.add(tab2, text="Manual")
+    baseline_tab.add(tab2b, text="Shift")
 
     # First child frame
     frame3 = ttk.Frame(tab1, borderwidth=2, relief="groove")
@@ -1379,6 +1421,26 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
     button_baseline_res = tk.Button(tab2, text='Reset',
                                     command=button_man_baseline_reset)
     button_baseline_res.grid(row=2, column=2, padx=10, pady=2, sticky='nsew')
+
+    ###########################################################################
+    ##### Shift                                                            ####
+    ###########################################################################
+    shift_label = ttk.Label(
+        tab2b,
+        text="Vertical shift:",
+        anchor="center",
+        justify="center",
+        style="Box.TLabel"
+    )
+
+    shift_label.grid(row=0, column=0, padx=5, pady=2, sticky='nsew')
+    field_shift = ttk.Entry(tab2b, justify='center')
+    field_shift.insert(0, 0.0)
+    field_shift.grid(row=1, column=0, padx=5, pady=2, sticky='nsew')
+
+    button_shift = tk.Button(tab2b, text='Baseline',
+                                command=button_shift_clicked)
+    button_shift.grid(row=1, column=1, padx=10, pady=2, sticky='nsew')
 
     ###########################################################################
     ##### Common                                                           ####
