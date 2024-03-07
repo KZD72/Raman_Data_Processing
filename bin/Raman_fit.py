@@ -26,6 +26,7 @@ Library with all functions to fit Raman data once baseline is removed
 # Raman_fit
 import numpy as np
 from scipy.special import wofz
+from scipy import signal
 import lmfit
 from lmfit import Parameters, Minimizer
 from bin import Raman_plot
@@ -112,6 +113,7 @@ def voigt_f_not_normalised(x, x0, g_FWHM, l_FWHM):
 
     References:
         - Faddeeva, W., & Faddeeva, S. (2010). Algorithm 916: Evaluation of the Complex Error Function. ACM Transactions on Mathematical Software (TOMS), 40(3), 15:1-15:16. doi:10.1145/1824820.1824821
+        - S. Schippers Analytical expression for the convolution of a Fano line profile with a gaussian,/ Journal of Quantitative Spectroscopy & Radiative Transfer 219 (2018) 33–36, https://doi.org/10.1016/j.jqsrt.2018.08.003
 
     """
 
@@ -220,8 +222,12 @@ def voigt_fano_not_normalised(x, x0, g_FWHM, l_FWHM, q=0):
 
     Returns:
         array-like: The Voigt profile evaluated at x.
-    """
 
+    References:
+        - Faddeeva, W., & Faddeeva, S. (2010). Algorithm 916: Evaluation of the Complex Error Function. ACM Transactions on Mathematical Software (TOMS), 40(3), 15:1-15:16. doi:10.1145/1824820.1824821
+        - S. Schippers Analytical expression for the convolution of a Fano line profile with a gaussian,/ Journal of Quantitative Spectroscopy & Radiative Transfer 219 (2018) 33–36, https://doi.org/10.1016/j.jqsrt.2018.08.003
+
+    """
 
     x_i = x - x0
     alpha = np.maximum(g_FWHM / 2,1e-4)
@@ -235,15 +241,16 @@ def voigt_fano_not_normalised(x, x0, g_FWHM, l_FWHM, q=0):
     faddeeva = wofz(z)
 
     # Compute the real part of the Faddeeva function and normalize by the standard deviation
-    voigt_r = np.real(faddeeva)/ sigma / np.sqrt(2 * np.pi)
-    voigt_imag = np.imag(faddeeva) / sigma / np.sqrt(2 * np.pi)
+    voigt_r = np.real(faddeeva)#/ sigma / np.sqrt(2 * np.pi)
+    voigt_imag = np.imag(faddeeva)# / sigma / np.sqrt(2 * np.pi)
 
     fano_par=q
 
-    unscaled=((1-fano_par**2)*voigt_r+2*fano_par*voigt_imag)
+    unscaled=-1*((fano_par**2-1)*voigt_r+2*fano_par*voigt_imag)
 
 
     return unscaled
+
 
 def voigt_fano_f(x, x0, g_FWHM, l_FWHM, amplitude, q=0):
      """
@@ -271,7 +278,56 @@ def voigt_fano_f(x, x0, g_FWHM, l_FWHM, amplitude, q=0):
 
      return voigt_fano_normalized*amplitude
 
+def voigt_fano_not_normalised_num(x, x0, g_FWHM, l_FWHM, q=0):
+    """
+    This function performs the convolution of a Gaussian and a Fano function.
+    
+    Parameters:
+    x (numpy array): The array of x values.
+    x0 (float): The center of the Gaussian and Fano functions.
+    g_FWHM (float): The full-width at half maximum of the Gaussian function.
+    l_FWHM (float): The full-width at half maximum of the Fano function.
+    q (float, optional): The asymmetry parameter of the Fano function. Default is 0.
+    
+    Returns:
+    numpy array: The convolution of the Gaussian and Fano functions.
+    """
+    
+    # Generate the Gaussian function
+    gauss = gauss_f(x, x0, g_FWHM, 1)
+    
+    # Generate the Fano function
+    fano = fano_f(x, x0, l_FWHM, 1, q)
+    
+    # Perform the convolution
+    unscaled = signal.convolve(gauss, fano, mode='same')
 
+    return unscaled
+def voigt_fano_f_num(x, x0, g_FWHM, l_FWHM, amplitude, q=0):
+     """
+     Calculate the normalised Voigt profile using the convolution of the Fano lineshape and a Gaussian.
+
+     Parameters:
+         x (array-like): The input variable.
+         peak_pos (float): The center of the profile.
+         g_FWHM (float): The Gaussian component's full width at half maximum (FWHM).
+         l_FWHM (float): The Fano lineshape component's full width at half maximum (FWHM).
+         amplitude (float): The amplitude of the Voigt profile.
+         q (float): The asymmetry parameter (Fano factor) determining the shape of the line.
+
+     Returns:
+         array-like: The Voigt profile evaluated at x.
+     """
+     # Calculate the unnormalized Voigt function
+     voight_fano = voigt_fano_not_normalised_num(x, x0, g_FWHM, l_FWHM, q)
+
+     # Find the maximum value of the Voigt function at x0
+     #max_value = np.maximum(voigt_fano_not_normalised_num(x0, x0, g_FWHM, l_FWHM, q),1e-20)
+
+     # Normalize the Voigt function by dividing by the maximum value
+     voigt_fano_normalized = voight_fano# / max_value
+
+     return voigt_fano_normalized*amplitude
 
 def model_f(params, x, peaks,model_type=None):
     """
@@ -329,7 +385,7 @@ def model_f(params, x, peaks,model_type=None):
                                       params['Peak_'+str(item+1)+'_Intensity'],
                                       params['Peak_'+str(item+1)+'_Fano_Asymmetry'])
                                      )
-        elif model_type[item]=="Fano-Full":
+        elif model_type[item]=="Fano-Voigt":
             function_composed.append(voigt_fano_f(x,
                                       params['Peak_'+str(item+1)+'_Center'],
                                       params['Peak_'+str(item+1)+'_Gauss_FWHM'],
@@ -337,6 +393,14 @@ def model_f(params, x, peaks,model_type=None):
                                       params['Peak_'+str(item+1)+'_Intensity'],
                                       params['Peak_'+str(item+1)+'_Fano_Asymmetry'])
                                      )
+        elif model_type[item]=="Fano-Voigt-num":
+            function_composed.append(voigt_fano_f_num(x,
+                                        params['Peak_'+str(item+1)+'_Center'],
+                                        params['Peak_'+str(item+1)+'_Gauss_FWHM'],
+                                        params['Peak_'+str(item+1)+'_Fano_FWHM'],
+                                        params['Peak_'+str(item+1)+'_Intensity'],
+                                        params['Peak_'+str(item+1)+'_Fano_Asymmetry'])
+                                        )
         elif model_type[item]=='Not used':
 
             f_0(x)
@@ -397,13 +461,19 @@ def params_f(peaks, model_type=None):
             params.add('Peak_'+str(item+1)+'_Center', value=peaks[item][0],min=0)
             params.add('Peak_'+str(item+1)+'_Fano_FWHM', value=2,min=0.1)
             params.add('Peak_'+str(item+1)+'_Intensity', value=peaks[item][1],min=0)
-            params.add('Peak_'+str(item+1)+'_Fano_Asymmetry', value=0,min=-1e4,max=1e4)
-        elif model_type[item]=="Fano-Full":
+            params.add('Peak_'+str(item+1)+'_Fano_Asymmetry', value=0.001,min=-1e4,max=1e4)
+        elif model_type[item]=="Fano-Voigt":
             params.add('Peak_'+str(item+1)+'_Center', value=peaks[item][0],min=0)
             params.add('Peak_'+str(item+1)+'_Gauss_FWHM', value=2,min=0.1)
             params.add('Peak_'+str(item+1)+'_Fano_FWHM', value=2,min=0.1)
             params.add('Peak_'+str(item+1)+'_Intensity', value=peaks[item][1],min=0)
-            params.add('Peak_'+str(item+1)+'_Fano_Asymmetry',  value=0,min=-1e4,max=1e4)
+            params.add('Peak_'+str(item+1)+'_Fano_Asymmetry',  value=0.001,min=-1e4,max=1e4)
+        elif model_type[item]=="Fano-Voigt-num":
+            params.add('Peak_'+str(item+1)+'_Center', value=peaks[item][0],min=0)
+            params.add('Peak_'+str(item+1)+'_Gauss_FWHM', value=2,min=0.1)
+            params.add('Peak_'+str(item+1)+'_Fano_FWHM', value=2,min=0.1)
+            params.add('Peak_'+str(item+1)+'_Intensity', value=peaks[item][1],min=0)
+            params.add('Peak_'+str(item+1)+'_Fano_Asymmetry',  value=0.001,min=-1e4,max=1e4)
         elif model_type[item]=='Not used':
             print("not used")
         else:
