@@ -269,9 +269,10 @@ def voigt_fano_f(x, x0, g_FWHM, l_FWHM, amplitude, q=0):
      """
      # Calculate the unnormalized Voigt function
      voight_fano = voigt_fano_not_normalised(x, x0, g_FWHM, l_FWHM, q)
+    
 
      # Find the maximum value of the Voigt function at x0
-     max_value = np.maximum(voigt_fano_not_normalised(x0, x0, g_FWHM, l_FWHM, q),1e-20)
+     max_value = np.maximum(np.max(voight_fano),1e-20)
 
      # Normalize the Voigt function by dividing by the maximum value
      voigt_fano_normalized = voight_fano / max_value
@@ -294,15 +295,22 @@ def voigt_fano_not_normalised_num(x, x0, g_FWHM, l_FWHM, q=0):
     """
     
     # Generate the Gaussian function
-    gauss = gauss_f(x, x0, g_FWHM, 1)
+    gauss = np.array(gauss_f(x, x0, g_FWHM, 1))
     
     # Generate the Fano function
-    fano = fano_f(x, x0, l_FWHM, 1, q)
+    fano = np.array(fano_f(x, x0, l_FWHM, 1, q))
     
     # Perform the convolution
-    unscaled = signal.convolve(gauss, fano, mode='same')
+    full_convolution = np.convolve(gauss, fano, mode='same')#signal.convolve(gauss, fano, mode='same')
+    # Compute the start index for the 'same' mode
+    start_index = (full_convolution.size // 2) - (gauss.size // 2)
+
+    # Extract the central part of the convolution that is the same size as the input
+    unscaled = full_convolution#[start_index : start_index + gauss.size]
 
     return unscaled
+
+
 def voigt_fano_f_num(x, x0, g_FWHM, l_FWHM, amplitude, q=0):
      """
      Calculate the normalised Voigt profile using the convolution of the Fano lineshape and a Gaussian.
@@ -320,12 +328,12 @@ def voigt_fano_f_num(x, x0, g_FWHM, l_FWHM, amplitude, q=0):
      """
      # Calculate the unnormalized Voigt function
      voight_fano = voigt_fano_not_normalised_num(x, x0, g_FWHM, l_FWHM, q)
-
+      
      # Find the maximum value of the Voigt function at x0
-     #max_value = np.maximum(voigt_fano_not_normalised_num(x0, x0, g_FWHM, l_FWHM, q),1e-20)
+     max_value = np.maximum(np.max(voight_fano),1e-20)
 
      # Normalize the Voigt function by dividing by the maximum value
-     voigt_fano_normalized = voight_fano# / max_value
+     voigt_fano_normalized = voight_fano/max_value
 
      return voigt_fano_normalized*amplitude
 
