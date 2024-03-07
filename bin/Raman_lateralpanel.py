@@ -907,18 +907,17 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
     def button_peak_analizer_clicked():
         global x_baseline, y_baseline, info, peak_value, peak_val,model_list
 
-        def on_closing():
-            button_clipper.config(state="normal")
-            button_substract_baseline.config(state="normal")
-            button_baseline.config(state="normal")
-            button_peak_detection.config(state="normal")
-            button_peak_processing.config(state="normal")
-            button_peak_adding.config(state="normal")
-            button_normalise.config(state="normal")
-            button_load_batch_folder.config(state="normal")
-            button_batch.config(state="disabled")
-            fit_window.quit()
-            fit_window.destroy()
+        # def on_closing():
+        #     button_clipper.config(state="normal")
+        #     button_substract_baseline.config(state="normal")
+        #     button_baseline.config(state="normal")
+        #     button_peak_detection.config(state="normal")
+        #     button_peak_processing.config(state="normal")
+        #     button_peak_adding.config(state="normal")
+        #     button_normalise.config(state="normal")
+        #     button_load_batch_folder.config(state="normal")
+        #     button_batch.config(state="disabled")
+            
         # deactivate buttons
         button_clipper.config(state="disabled")
         button_baseline.config(state="disabled")

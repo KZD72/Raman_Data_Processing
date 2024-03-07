@@ -563,7 +563,7 @@ def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks):
         label_model .grid(row=0, column=3, padx=5, pady=5)
 
         options = ['Not used', 'Gaussian', 'Lorentz',
-                   'Gauss-Lorentz', 'Voigt', 'Fano-Simply', 'Fano-Full']
+                   'Gauss-Lorentz', 'Voigt', 'Fano-Simply', 'Fano-Voigt','Fano-Voigt-num']
 
         combobox = ttk.Combobox(frame, values=options)
         combobox.set(options[3])
@@ -647,9 +647,11 @@ def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks):
                     # Get the integral:
                     # Define the function to be integrated
 
-                    def f(x):
-                        return Raman_fit.model_f(fitting.params, x, peak_info, new_model)
-                    result, error = spi.quad(f, x[0], x[-1])
+                    # def f(x):
+                    #     return Raman_fit.model_f(fitting.params, x, peak_info, new_model)
+
+                    # result, error = spi.quad(f, x[0], x[-1])
+                    result=np.trapz(Raman_fit.model_f(fitting.params, x, peak_info, new_model))
                     int_val.append(result)
                     # Extract the FWHM of the voight profile:
 
