@@ -158,6 +158,39 @@ def voigt_f(x, x0, g_FWHM, l_FWHM,amplitude):
 
     return voigt_normalized*amplitude
 
+def gauss_lorentz_asy_f(x, a_0=1, a_1=0, a_2=1, a_3=0, q=0):
+    """
+    This function calculates the asymmetric pseudo-Voigt function, which is a linear combination of a Gaussian function and a Lorentzian function, with a sigmoidal damped perturbation to introduce asymmetry.
+
+    Parameters:
+    x (numpy array): The array of x values.
+    a_0 (float): The mixing parameter for the Gaussian and Lorentzian functions. Default is 1.
+    a_1 (float): The center of the peak. Default is 0.
+    a_2 (float): The FWHM of the Gauss ald Lorentz.
+    a_3 (float): The amplitude of the peak. Default is 0.
+    q (float): The asymmetry parameter. Default is 0.
+
+    Returns:
+    numpy array: The asymmetric pseudo-Voigt function evaluated at each point in x.
+    """
+    
+    # Define the sigmoidal damped perturbation
+    sigmoidal_damped_perturbation=x*(1 - q * ((x - a_1) / a_2) * np.exp(-1*((x - a_1) ** 2) / (8 * a_2 ** 2)))
+    
+    # Compute the Gaussian part of the pseudo-Voigt function
+    f1 = a_0 * gauss_f(sigmoidal_damped_perturbation, a_1, a_2, 1)
+    
+    # Compute the Lorentzian part of the pseudo-Voigt function
+    f2 = (1 - a_0) * lorentz_f(sigmoidal_damped_perturbation, a_1, a_2, 1)
+
+    unscaled=f1+f2
+
+    scaled=a_3*unscaled/np.max(unscaled)
+
+    # Return the sum of the Gaussian and Lorentzian parts
+    return scaled
+
+
 
 def fano_f_not_normalised(x, a_1=0, a_2=1, q=1e10):
     """
@@ -379,6 +412,14 @@ def model_f(params, x, peaks,model_type=None):
                                       params['Peak_'+str(item+1)+'_FWHM'],
                                       params['Peak_'+str(item+1)+'_Intensity'])
                                      )
+        elif model_type[item]=="Asy-Gauss-Lorentz":
+             function_composed.append(gauss_lorentz_asy_f(x,
+                                      params['Peak_'+str(item+1)+'_Gaussian_component'],
+                                      params['Peak_'+str(item+1)+'_Center'],
+                                      params['Peak_'+str(item+1)+'_FWHM'],
+                                      params['Peak_'+str(item+1)+'_Intensity'],
+                                      params['Peak_'+str(item+1)+'_Asymmetry'])
+                                     )
         elif model_type[item]=="Voigt":
             function_composed.append(voigt_f(x,
                                       params['Peak_'+str(item+1)+'_Center'],
@@ -401,14 +442,14 @@ def model_f(params, x, peaks,model_type=None):
                                       params['Peak_'+str(item+1)+'_Intensity'],
                                       params['Peak_'+str(item+1)+'_Fano_Asymmetry'])
                                      )
-        elif model_type[item]=="Fano-Voigt-num":
-            function_composed.append(voigt_fano_f_num(x,
-                                        params['Peak_'+str(item+1)+'_Center'],
-                                        params['Peak_'+str(item+1)+'_Gauss_FWHM'],
-                                        params['Peak_'+str(item+1)+'_Fano_FWHM'],
-                                        params['Peak_'+str(item+1)+'_Intensity'],
-                                        params['Peak_'+str(item+1)+'_Fano_Asymmetry'])
-                                        )
+        # elif model_type[item]=="Fano-Voigt-num":
+        #     function_composed.append(voigt_fano_f_num(x,
+        #                                 params['Peak_'+str(item+1)+'_Center'],
+        #                                 params['Peak_'+str(item+1)+'_Gauss_FWHM'],
+        #                                 params['Peak_'+str(item+1)+'_Fano_FWHM'],
+        #                                 params['Peak_'+str(item+1)+'_Intensity'],
+        #                                 params['Peak_'+str(item+1)+'_Fano_Asymmetry'])
+        #                                 )
         elif model_type[item]=='Not used':
 
             f_0(x)
@@ -460,6 +501,12 @@ def params_f(peaks, model_type=None):
             params.add('Peak_'+str(item+1)+'_Center', value=peaks[item][0],min=0)
             params.add('Peak_'+str(item+1)+'_FWHM', value=2,min=1)
             params.add('Peak_'+str(item+1)+'_Intensity', value=peaks[item][1],min=0)
+        elif model_type[item]=="Asy-Gauss-Lorentz":
+            params.add('Peak_'+str(item+1)+'_Gaussian_component', value=0.5,min=0,max=1)
+            params.add('Peak_'+str(item+1)+'_Center', value=peaks[item][0],min=0)
+            params.add('Peak_'+str(item+1)+'_FWHM', value=2,min=1)
+            params.add('Peak_'+str(item+1)+'_Intensity', value=peaks[item][1],min=0)
+            params.add('Peak_'+str(item+1)+'_Asymmetry', value=0,min=-1000,max=1000)
         elif model_type[item]=="Voigt":
             params.add('Peak_'+str(item+1)+'_Center', value=peaks[item][0],min=0)
             params.add('Peak_'+str(item+1)+'_Gauss_FWHM', value=2,min=0.1)
@@ -476,12 +523,12 @@ def params_f(peaks, model_type=None):
             params.add('Peak_'+str(item+1)+'_Fano_FWHM', value=2,min=0.1)
             params.add('Peak_'+str(item+1)+'_Intensity', value=peaks[item][1],min=0)
             params.add('Peak_'+str(item+1)+'_Fano_Asymmetry',  value=0.001,min=-1e4,max=1e4)
-        elif model_type[item]=="Fano-Voigt-num":
-            params.add('Peak_'+str(item+1)+'_Center', value=peaks[item][0],min=0)
-            params.add('Peak_'+str(item+1)+'_Gauss_FWHM', value=2,min=0.1)
-            params.add('Peak_'+str(item+1)+'_Fano_FWHM', value=2,min=0.1)
-            params.add('Peak_'+str(item+1)+'_Intensity', value=peaks[item][1],min=0)
-            params.add('Peak_'+str(item+1)+'_Fano_Asymmetry',  value=0.001,min=-1e4,max=1e4)
+        # elif model_type[item]=="Fano-Voigt-num":
+        #     params.add('Peak_'+str(item+1)+'_Center', value=peaks[item][0],min=0)
+        #     params.add('Peak_'+str(item+1)+'_Gauss_FWHM', value=2,min=0.1)
+        #     params.add('Peak_'+str(item+1)+'_Fano_FWHM', value=2,min=0.1)
+        #     params.add('Peak_'+str(item+1)+'_Intensity', value=peaks[item][1],min=0)
+        #     params.add('Peak_'+str(item+1)+'_Fano_Asymmetry',  value=0.001,min=-1e4,max=1e4)
         elif model_type[item]=='Not used':
             print("not used")
         else:
