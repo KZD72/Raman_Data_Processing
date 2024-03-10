@@ -61,7 +61,7 @@ def lorentz_f(x, a_1=0, a_2=1, a_3=1):
        x (array-like): The input variable.
       a_1 (float): The center of the Lorentzian.
       a_2: The Full Width at Half Maximum (FWHM) of the Lorentzian.
-      a_3(float): The amplitude of the Gaussian.
+      a_3(float): The amplitude of the Peak.
 
    Returns:
        array-like: The Lorentzian shape evaluated at x.
@@ -79,7 +79,7 @@ def gauss_lorentz_f(x, a_0=1, a_1=0, a_2=1, a_3=0):
        a_0 (float): The componenet of Gaussian in the mix.
        a_1 (float): The center of the Gaussian.
        a_2: The Full Width at Half Maximum (FWHM) of the Gaussian.
-       a_3(float): The amplitude of the Gaussian.
+       a_3(float): The amplitude of the Gaussian-Lorentz.
        From a_0 is possible to approximate  the FWHM of
        the lorentzian (fₗ) in the Voigh to ~1% from:
            a_0= 1.36603(fₗ/a_2) - 0.47719(fₗ/a_2)² + 0.11116(fₗ/a_2)³
@@ -172,6 +172,7 @@ def gauss_lorentz_asy_f(x, a_0=1, a_1=0, a_2=1, a_3=0, q=0):
 
     Returns:
     numpy array: The asymmetric pseudo-Voigt function evaluated at each point in x.
+    
     """
     
     # Define the sigmoidal damped perturbation
@@ -188,6 +189,40 @@ def gauss_lorentz_asy_f(x, a_0=1, a_1=0, a_2=1, a_3=0, q=0):
     scaled=a_3*unscaled/np.max(unscaled)
 
     # Return the sum of the Gaussian and Lorentzian parts
+    return scaled
+
+def bi_gauss_lorentz(x, a_0=1, a_1=0, a_2=1, a_3=0, q=0):
+    """
+    This function calculates a bi-modal asymmetric pseudo-Voigt function, which is a linear combination of two Gaussian-Lorentzian functions, with a transition at x=a_1.
+
+    Parameters:
+    x (numpy array): The array of x values.
+    a_0 (float): The mixing parameter for the Gaussian and Lorentzian functions. Default is 1.
+    a_1 (float): The center of the peak and the transition point between the two modes. Default is 0.
+    a_2 (float): The FWHM of the Gauss and Lorentz. Default is 1.
+    a_3 (float): The amplitude of the peak. Default is 0.
+    q (float): The asymmetry parameter. Default is 0.
+
+    Returns:
+    numpy array: The asymmetric pseudo-Voigt function evaluated at each point in x.
+    """
+    
+    # Compute the first Gaussian-Lorentzian function
+    f1 = gauss_lorentz_f(x, a_0, a_1, a_2, a_3)
+    
+    # Compute the second Gaussian-Lorentzian function with modified FWHM
+    f2 = gauss_lorentz_f(x, a_0, a_1, q*a_2, a_3)
+    
+    # Create a boolean mask for the values of x below the transition point a_1
+    mask = x < a_1
+    
+    # Use the mask to select f1 for x < a_1 and f2 for x >= a_1
+    unscaled = np.where(mask, f1, f2)
+
+    # Scale the function so its maximum value is a_3
+    scaled = a_3 * unscaled / np.max(unscaled)
+
+    # Return the scaled function
     return scaled
 
 
@@ -413,7 +448,7 @@ def model_f(params, x, peaks,model_type=None):
                                       params['Peak_'+str(item+1)+'_Intensity'])
                                      )
         elif model_type[item]=="Asy-Gauss-Lorentz":
-             function_composed.append(gauss_lorentz_asy_f(x,
+             function_composed.append(bi_gauss_lorentz(x,
                                       params['Peak_'+str(item+1)+'_Gaussian_component'],
                                       params['Peak_'+str(item+1)+'_Center'],
                                       params['Peak_'+str(item+1)+'_FWHM'],
@@ -506,7 +541,7 @@ def params_f(peaks, model_type=None):
             params.add('Peak_'+str(item+1)+'_Center', value=peaks[item][0],min=0)
             params.add('Peak_'+str(item+1)+'_FWHM', value=2,min=1)
             params.add('Peak_'+str(item+1)+'_Intensity', value=peaks[item][1],min=0)
-            params.add('Peak_'+str(item+1)+'_Asymmetry', value=0,min=-1000,max=1000)
+            params.add('Peak_'+str(item+1)+'_Asymmetry', value=0,min=1e-6,max=10)
         elif model_type[item]=="Voigt":
             params.add('Peak_'+str(item+1)+'_Center', value=peaks[item][0],min=0)
             params.add('Peak_'+str(item+1)+'_Gauss_FWHM', value=2,min=0.1)

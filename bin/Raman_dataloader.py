@@ -66,7 +66,7 @@ def check_number_f(n):
 
 def robust_float(value):
     """
-    Convert a string value to a floating-point number, handling different decimal separators.
+    Convert a string value to a floating-point number, handling different decimal separators and scientific notation.
 
     Parameters:
         value (str): The string value to convert.
@@ -78,9 +78,14 @@ def robust_float(value):
         result = robust_float('1,234.56')
         print(result)  # Output: 1234.56
     """
-    # Define a list of possible decimal separators
-    result = ne.evaluate(value.replace(',', '.'))
-    return result.item()
+    try:
+        # First, try to convert the string directly to a float
+        value = value.replace(',', '.')
+        return float(value)
+    except ValueError:
+        # If that fails, try replacing commas with periods and evaluating
+        result = ne.evaluate(value.replace(',', '.'))
+        return result.item()
 
 def reorder_data(arr,multiple=False, transpose=False, squeeze=False):
     """
