@@ -341,6 +341,7 @@ def voigt_fix_dic(dictionary):
 
     for subentry in dictionary.values():
         if 'Gauss_FWHM' in subentry and 'Lorentz_FWHM' in subentry:
+           
             # Calculate the FWHM using the Voigt function approximation
             fwhm = 0.5346 * subentry['Lorentz_FWHM'] + np.sqrt(
                 subentry['Gauss_FWHM'] * subentry['Gauss_FWHM'] + 0.2166 * subentry['Lorentz_FWHM'] * subentry['Lorentz_FWHM'])
@@ -352,6 +353,9 @@ def voigt_fix_dic(dictionary):
             subentry_values.insert(center_index + 1, fwhm)
             subentry.clear()
             subentry.update(zip(subentry_keys, subentry_values))
+        if 'Asymmetry' in subentry:
+            #Correction of the FWHM from both functions in bimodal
+            subentry['FWHM']=subentry['FWHM']/2+subentry['Asymmetry']*subentry['FWHM']/2
 
     return dictionary
 
@@ -563,7 +567,7 @@ def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks):
         label_model .grid(row=0, column=3, padx=5, pady=5)
 
         options = ['Not used', 'Gaussian', 'Lorentz',
-                   'Gauss-Lorentz', 'Voigt', 'Fano-Simply', 'Fano-Voigt','Fano-Voigt-num']
+                   'Gauss-Lorentz','Asy-Gauss-Lorentz', 'Voigt', 'Fano-Simply', 'Fano-Voigt']
 
         combobox = ttk.Combobox(frame, values=options)
         combobox.set(options[3])
