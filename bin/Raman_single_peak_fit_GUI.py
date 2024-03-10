@@ -341,12 +341,10 @@ def voigt_fix_dic(dictionary):
 
     for subentry in dictionary.values():
         if 'Gauss_FWHM' in subentry and 'Lorentz_FWHM' in subentry:
-            if 'Asymmetry' in subentry:
-                fwhm=subentry['Gauss_FWHM']*(1+0.40*subentry['Asymmetry']**2+1.35*subentry['Asymmetry']**4)
-            else:
+           
             # Calculate the FWHM using the Voigt function approximation
-                fwhm = 0.5346 * subentry['Lorentz_FWHM'] + np.sqrt(
-                    subentry['Gauss_FWHM'] * subentry['Gauss_FWHM'] + 0.2166 * subentry['Lorentz_FWHM'] * subentry['Lorentz_FWHM'])
+            fwhm = 0.5346 * subentry['Lorentz_FWHM'] + np.sqrt(
+                subentry['Gauss_FWHM'] * subentry['Gauss_FWHM'] + 0.2166 * subentry['Lorentz_FWHM'] * subentry['Lorentz_FWHM'])
             # Insert the 'FWHM' subentry after 'Center'
             subentry_keys = list(subentry.keys())
             center_index = subentry_keys.index('Center')
@@ -355,6 +353,9 @@ def voigt_fix_dic(dictionary):
             subentry_values.insert(center_index + 1, fwhm)
             subentry.clear()
             subentry.update(zip(subentry_keys, subentry_values))
+        if 'Asymmetry' in subentry:
+            #Correction of the FWHM from both functions in bimodal
+            subentry['FWHM']=subentry['FWHM']/2+subentry['Asymmetry']*subentry['FWHM']/2
 
     return dictionary
 
