@@ -4,10 +4,10 @@ This project provides a program capable of fully analyzing Raman and IR spectra 
 
 ## Features
 
-- **Peak Fitting**: The tool allows for fitting of peaks with full Voigt profiles, pseudo Voigt profiles, Fano, Fano Voigt, and Gaussian and Lorentzian models individually.
+- **Peak Fitting**: The tool allows for fitting of peaks with full Voigt profiles, pseudo Voigt profiles, Fano, Fano Voigt, Gaussian and Lorentzian models individually. It now incorporates asymmetric curve fitting, using Bimodal Gauss Gauss, Bimodal Lorentz-Lorentz, Mixed bimodal Lorentz Gauss, and more complex algorithms like Pearson IV and Sigmoidal Gauss Lorentz.
 - **Post-Processing**: Provides post-processed data between all peaks in the spectrum.
 - **Batch Processing**: Includes a batch processing routine for handling multiple datasets at once.
-- **Spectrometer Support**: Currently supports Horiba and B&WTech spectrometers. Any data file in .txt format can be processed.
+- **Spectrometer Support**: Currently supports Horiba and B&WTech spectrometers, also Brukker IR data can be proceed. Any data file in .txt or .dat format can be processed, but samples are needed to create the correct parsing. Please send a sample if your data is not coming from a supported spectrometer.
 
 ## Future Developments
 
