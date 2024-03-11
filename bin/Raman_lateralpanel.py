@@ -333,8 +333,8 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
     global dict_container
     global new_peak_entry
     global peak_finding_tab
-    global model_list
     global field_shift
+    global model_list
 
     raw_dat = raw_dat_a
     x_raw = raw_dat[:, 0]
@@ -942,6 +942,12 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
         secondary_window.protocol("WM_DELETE_WINDOW", on_closing)
         secondary_window.mainloop()
 
+    def update_model_list(new_model_list):
+        # This function updates model_list in the main window
+        global model_list
+        model_list = new_model_list
+        
+
     def button_peak_analizer_clicked():
         global x_baseline, y_baseline, info, peak_value, peak_val,model_list
 
@@ -965,15 +971,15 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
         button_peak_processing.config(state="disabled")
         button_peak_adding.config(state="disabled")
         button_normalise.config(state="disabled")
-        button_load_batch_folder.config(state="disabled")
+        #button_load_batch_folder.config(state="disabled")
         button_batch.config(state="disabled")
         button_dashboard.config(state="disabled")
 
 
         
-        model_list=Raman_single_peak_fit_GUI.create_fit_panel(
-            main_window, canvas, canvas_panel, info, x_baseline, y_baseline, peak_val)
-        print(model_list)
+        Raman_single_peak_fit_GUI.create_fit_panel(
+            main_window, canvas, canvas_panel, info, x_baseline, y_baseline, peak_val,update_model_list)
+        
 
     def button_manual_adding_clicked():
         global peak_val, peaks, new_peak_entry  
@@ -1007,65 +1013,67 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
         """
         Opens a file dialog to select and load the data file.
         """
-        global valid_files
-
+        global valid_files,model_list        
         # Open the dialog to select a directory
         directory = filedialog.askdirectory()
 
         # Get a list of all files in the directory
-        files = os.listdir(directory)
+        try:
+            files = os.listdir(directory)
 
-        # Filter the list to only include .txt or datfiles
-        txt_files = [f for f in files if f.endswith('.txt') or f.endswith('.dat')]
+            # Filter the list to only include .txt or datfiles
+            txt_files = [f for f in files if f.endswith('.txt') or f.endswith('.dat')]
 
-        # Create a new Tkinter window
-        root = tk.Tk()
-        root.title("Checking files Progress")
-           # Create a progress bar
-          # Create a label for the estimated time remaining
-        time_label = tk.Label(root, text="")
-        time_label.pack()
-        # Create a style for the progress bar
-        style = ttk.Style()
-        style.configure("TProgressbar", thickness=50)  # Adjust the thickness as needed
-        progress = ttk.Progressbar(root, length=250, mode='determinate', style="TProgressbar") 
-        progress.pack()
+            # Create a new Tkinter window
+            root = tk.Tk()
+            root.title("Checking files Progress")
+            # Create a progress bar
+            # Create a label for the estimated time remaining
+            time_label = tk.Label(root, text="")
+            time_label.pack()
+            # Create a style for the progress bar
+            style = ttk.Style()
+            style.configure("TProgressbar", thickness=50)  # Adjust the thickness as needed
+            progress = ttk.Progressbar(root, length=250, mode='determinate', style="TProgressbar") 
+            progress.pack()
 
-        # Valid data files
-        valid_files = []
-        numer_non_valid_files = 0
-        for item, file in enumerate(txt_files):
-            start_time = time.time()
-            try:
-                check, key = Raman_dataloader.load_spectra_data(
-                    os.path.join(directory, file), data_type, silent=False)
+            # Valid data files
+            valid_files = []
+            numer_non_valid_files = 0
+            for item, file in enumerate(txt_files):
+                start_time = time.time()
+                try:
+                    check, key = Raman_dataloader.load_spectra_data(
+                        os.path.join(directory, file), data_type, silent=False)
 
-                if key:
-                    valid_files.append(os.path.join(directory, file))
-                else:
+                    if key:
+                        valid_files.append(os.path.join(directory, file))
+                    else:
+                        numer_non_valid_files = numer_non_valid_files+1
+                except:
                     numer_non_valid_files = numer_non_valid_files+1
-            except:
-                numer_non_valid_files = numer_non_valid_files+1
-            
-            progress['value'] = (item+1) / len(txt_files) * 100
-            elapsed_time = time.time() - start_time
-            estimated_time = elapsed_time * (len(txt_files) - item)
-            
-            time_label['text'] = "{:.2f} % completed".format((item+1) / len(txt_files) * 100)+"\nEstimated time remaining:\n{:.2f} seconds".format(estimated_time)
-            root.update()
-            root.update_idletasks()
+                
+                progress['value'] = (item+1) / len(txt_files) * 100
+                elapsed_time = time.time() - start_time
+                estimated_time = elapsed_time * (len(txt_files) - item)
+                
+                time_label['text'] = "{:.2f} % completed".format((item+1) / len(txt_files) * 100)+"\nEstimated time remaining:\n{:.2f} seconds".format(estimated_time)
+                root.update()
+                root.update_idletasks()
 
-        # Close the Tkinter window once the loop is finished
-        root.destroy()
-        messagebox.showinfo("Information", f"{len(valid_files)} files valid to be processed,{numer_non_valid_files} files to be excluded", parent=main_window)
+            # Close the Tkinter window once the loop is finished
+            root.destroy()
+            messagebox.showinfo("Information", f"{len(valid_files)} files valid to be processed,{numer_non_valid_files} files to be excluded", parent=main_window)
 
-        if len(valid_files) > 0:
-            button_batch.config(state="normal")
+            if len(valid_files) > 0:
+                button_batch.config(state="normal")
+        except:
+            error("Select a valid Folder")
 
     def button_batch_proccesing():
         global valid_files, normalise_check, raw_dat, info 
         global bas_man_points, x_baseline, y_baseline,dict_container
-        global peak_finding_tab, peak_val, peaks
+        global peak_finding_tab, peak_val, peaks, model_list
 
         new_x_baseline = [bas_man_points[i, 0]
                           for i in range(1, len(bas_man_points) - 1)]

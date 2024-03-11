@@ -374,6 +374,15 @@ def voigt_fix_dic(dictionary,models):
                 subentry_values.insert(center_index + 1, fwhm)
                 subentry.clear()
                 subentry.update(zip(subentry_keys, subentry_values))
+        #Add the model to dictionary:
+        model=models[iter]
+        subentry_keys = list(subentry.keys())
+        center_index = subentry_keys.index('Center')
+        subentry_keys.insert(center_index -1, 'Peak Model')
+        subentry_values = list(subentry.values())
+        subentry_values.insert(center_index - 1, model)
+        subentry.clear()
+        subentry.update(zip(subentry_keys, subentry_values))
 
     return dictionary
 
@@ -512,8 +521,8 @@ def batch_fit(canvas, canvas_panel, info, x, y, peaks, file_path,models=[], sile
 
 
 ###############################################################################
-def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks):
-    global peak_list_entries, peak_labels, model_list, info_fit, time_stamp, formated_info, dialog
+def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks, update_model_list):
+    global peak_list_entries, peak_labels, info_fit, time_stamp, formated_info, dialog #model_list
     np_peaks = np.asarray(peaks, dtype='float64')
     x_peak = np_peaks[:, 0]
     y_peak = np_peaks[:, 1]
@@ -550,7 +559,7 @@ def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks):
        Returns:
            None
        """
-        global peak_list_entries, peak_labels, model_list
+        global peak_list_entries, peak_labels#, model_list
 
         label = ttk.Label(
             frame,
@@ -603,11 +612,11 @@ def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks):
         global peak_list_entries, x_peak, y_peak, info_fit, time_stamp, formated_info
 
         # Extract peak positions and models from UI elements
-        peak_positions = [float(peak_list_entrie.get(
-        )) for peak_list_entrie in peak_list_entries if check_range_f(x, peak_list_entrie.get())]
+        peak_positions = [float(peak_list_entrie.get()) for peak_list_entrie in peak_list_entries
+                           if check_range_f(x, peak_list_entrie.get())]
         if len(peak_positions) == len(peak_list_entries):
             models = [model.get() for model in model_list]
-
+            update_model_list(models)
             # Find the index corresponding to each peak position
             index = [np.searchsorted(np.asarray(x, dtype='float64'), peak)
                      for peak in peak_positions]
@@ -710,7 +719,6 @@ def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks):
             button_fit_info.config(state="normal")
             button_fit_info_save.config(state="normal")
             button_postpro.config(state="normal")
-            return model_list
         else:
             error("Introduce a valid number")
 
