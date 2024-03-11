@@ -315,7 +315,7 @@ def expanded_dict(dictionary, entries, label):
     return dictionary
 
 
-def voigt_fix_dic(dictionary):
+def voigt_fix_dic(dictionary,models):
     """
     Calculates and adds the 'FWHM' entry to the dictionary using the Voigt function approximation with ~0.02% accuracy.
 
@@ -339,9 +339,9 @@ def voigt_fix_dic(dictionary):
         print(output_dict)
     """
 
-    for subentry in dictionary.values():
-        if 'Gauss_FWHM' in subentry and 'Lorentz_FWHM' in subentry:
-           
+    for iter,subentry in enumerate(dictionary.values()):
+        
+        if 'Gauss_FWHM' in subentry and 'Lorentz_FWHM' in subentry:           
             # Calculate the FWHM using the Voigt function approximation
             fwhm = 0.5346 * subentry['Lorentz_FWHM'] + np.sqrt(
                 subentry['Gauss_FWHM'] * subentry['Gauss_FWHM'] + 0.2166 * subentry['Lorentz_FWHM'] * subentry['Lorentz_FWHM'])
@@ -353,9 +353,27 @@ def voigt_fix_dic(dictionary):
             subentry_values.insert(center_index + 1, fwhm)
             subentry.clear()
             subentry.update(zip(subentry_keys, subentry_values))
-        if 'Asymmetry' in subentry:
-            #Correction of the FWHM from both functions in bimodal
-            subentry['FWHM']=subentry['FWHM']/2+subentry['Asymmetry']*subentry['FWHM']/2
+        if models[iter]=="Asy-Sigmoidal-G-L":
+             #Correction of the FWHM from both functions in bimodal
+            fwhm=subentry['FWHM']*(1+0.40*subentry['Asymmetry']**2+1.35*subentry['Asymmetry']**4)
+            subentry_keys = list(subentry.keys())
+            center_index = subentry_keys.index('FWHM')
+            subentry_keys.insert(center_index + 1, 'Asymmetric_FWHM')
+            subentry_values = list(subentry.values())
+            subentry_values.insert(center_index + 1, fwhm)
+            subentry.clear()
+            subentry.update(zip(subentry_keys, subentry_values))
+        else:
+            if 'Asymmetry' in subentry:
+                #Correction of the FWHM from both functions in bimodal
+                fwhm=subentry['FWHM']/2+subentry['Asymmetry']*subentry['FWHM']/2
+                subentry_keys = list(subentry.keys())
+                center_index = subentry_keys.index('FWHM')
+                subentry_keys.insert(center_index + 1, 'Asymmetric_FWHM')
+                subentry_values = list(subentry.values())
+                subentry_values.insert(center_index + 1, fwhm)
+                subentry.clear()
+                subentry.update(zip(subentry_keys, subentry_values))
 
     return dictionary
 
@@ -465,7 +483,7 @@ def batch_fit(canvas, canvas_panel, info, x, y, peaks, file_path,models=[], sile
     formated_info = expanded_dict(
         formated_info, int_val, 'Integrated Intensity')
     # Add the FWHM if I have a voigt profile:
-    formated_info = voigt_fix_dic(formated_info)
+    formated_info = voigt_fix_dic(formated_info,models)
     # print(formated_info)
     # Update plot
 
@@ -567,7 +585,7 @@ def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks):
         label_model .grid(row=0, column=3, padx=5, pady=5)
 
         options = ['Not used', 'Gaussian', 'Lorentz',
-                   'Gauss-Lorentz','Asy-Gauss-Lorentz', 'Voigt', 'Fano-Simply', 'Fano-Voigt']
+                   'Gauss-Lorentz','Voigt','Asy-BiGauss','Asy-BiLorentz','Asy-BiGauss-Lorentz','Asy-Sigmoidal-G-L', 'Fano-Simply', 'Fano-Voigt']
 
         combobox = ttk.Combobox(frame, values=options)
         combobox.set(options[3])
@@ -664,7 +682,7 @@ def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks):
             formated_info = expanded_dict(
                 formated_info, int_val, 'Integrated Intensity')
             # Add the FWHM if I have a voigt profile:
-            formated_info = voigt_fix_dic(formated_info)
+            formated_info = voigt_fix_dic(formated_info,models)
             # print(formated_info)
             # Update plot
             fig, ax = Raman_plot.plotter(plots_to_show,
@@ -683,8 +701,9 @@ def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks):
                 text_widget_2.insert(
                     "end", f"Peak {peak_number}:" + "\n", "bold")
                 for parameter, value in parameters.items():
-                    text_widget_2.insert(
-                        "end", f"{parameter}: {value}" + "\n", "bold")
+                    # Convert value to string with 15 decimal places
+                    str_value = "{:.15f}".format(value) if isinstance(value, float) else str(value)
+                    text_widget_2.insert("end", f"{parameter}: {str_value}\n", "bold")
                 text_widget_2.insert("end", "\n", "bold")
 
             # Activate fit info button
