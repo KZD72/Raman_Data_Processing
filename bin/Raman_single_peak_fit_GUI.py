@@ -585,7 +585,7 @@ def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks):
         label_model .grid(row=0, column=3, padx=5, pady=5)
 
         options = ['Not used', 'Gaussian', 'Lorentz',
-                   'Gauss-Lorentz','Voigt','Asy-BiGauss','Asy-BiLorentz','Asy-BiGauss-Lorentz','Asy-Sigmoidal-G-L', 'Fano-Simply', 'Fano-Voigt']
+                   'Gauss-Lorentz','Voigt','Asy-BiGauss','Asy-BiLorentz','Asy-BiGauss-Lorentz','Asy-Sigmoidal-G-L','Asy-Pearson-IV', 'Fano-Simply', 'Fano-Voigt']
 
         combobox = ttk.Combobox(frame, values=options)
         combobox.set(options[3])
