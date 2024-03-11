@@ -297,6 +297,34 @@ def bi_lorentz_lorentz(x, a_1=0, a_2=1, a_3=0, q=0):
     # Return the scaled function
     return scaled
 
+def pearson_IV_asy_f(x, a_1=0, a_2=1, a_3=1, q=0, g=1):
+    """
+    This function calculates the asymmetric Pearson type IV function, which is a model used for peak fitting in spectroscopy.
+
+    Parameters:
+    x (numpy array): The array of x values.
+    a_1 (float): The location parameter, which shifts the function left or right. Default is 0.
+    a_2 (float): The scale parameter, which stretches or shrinks the function. Default is 1.
+    a_3 (float): The amplitude parameter, which scales the height of the function. Default is 0.
+    q (float): The shape parameter, which controls the asymmetry of the function. Default is 0.
+    g (float): The shape parameter, which controls the shape of the function. Default is 1.
+
+    Returns:
+    numpy array: The asymmetric Pearson type IV function evaluated at each point in x.
+    """
+    
+    # Compute the Lorentzian part of the Pearson type IV function
+    lor = (1 + ((x - a_1) / a_2) ** 2)
+
+    # Compute the perturbation to introduce asymmetry
+    perturbation = np.exp(-q * np.arctan((x - a_1) / a_2))
+    
+    # Scale the Lorentzian part by the perturbation and the shape parameter g
+    scaled = np.power(lor, g) * perturbation
+
+    # Return the scaled function, normalized by its maximum value
+    return a_3 * (scaled / np.max(scaled))
+
 def fano_f_not_normalised(x, a_1=0, a_2=1, q=1e10):
     """
     Calculate the Fano lineshape without Voigt
@@ -553,6 +581,14 @@ def model_f(params, x, peaks,model_type=None):
                                     params['Peak_'+str(item+1)+'_Intensity'],
                                     params['Peak_'+str(item+1)+'_Asymmetry'])
                                     )
+        elif model_type[item]=="Asy-Pearson-IV":
+            function_composed.append(pearson_IV_asy_f(x,
+                                    params['Peak_'+str(item+1)+'_Center'],
+                                    params['Peak_'+str(item+1)+'_FWHM'],
+                                    params['Peak_'+str(item+1)+'_Intensity'],
+                                    params['Peak_'+str(item+1)+'_Asymmetry'],
+                                    params['Peak_'+str(item+1)+'_Shape_Parameter'])
+                                    )    
         elif model_type[item]=="Fano-Simply":
             function_composed.append(fano_f(x,
                                       params['Peak_'+str(item+1)+'_Center'],
@@ -653,6 +689,12 @@ def params_f(peaks, model_type=None):
             params.add('Peak_'+str(item+1)+'_FWHM', value=2,min=1)
             params.add('Peak_'+str(item+1)+'_Intensity', value=peaks[item][1],min=peaks[item][1]/2,max=peaks[item][1]*2)
             params.add('Peak_'+str(item+1)+'_Asymmetry', value=0,min=-0.45,max=0.45)
+        elif model_type[item]=="Asy-Pearson-IV":
+            params.add('Peak_'+str(item+1)+'_Center', value=peaks[item][0],min=0)
+            params.add('Peak_'+str(item+1)+'_FWHM', value=2,min=1)
+            params.add('Peak_'+str(item+1)+'_Intensity', value=peaks[item][1],min=peaks[item][1]/2,max=peaks[item][1]*2)
+            params.add('Peak_'+str(item+1)+'_Asymmetry', value=0,min=0)
+            params.add('Peak_'+str(item+1)+'_Shape_Parameter', value=-1,max=-0.01)           
         elif model_type[item]=="Fano-Simply":
             params.add('Peak_'+str(item+1)+'_Center', value=peaks[item][0],min=0)
             params.add('Peak_'+str(item+1)+'_Fano_FWHM', value=2,min=0.1)
