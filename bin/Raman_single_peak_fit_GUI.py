@@ -314,6 +314,26 @@ def expanded_dict(dictionary, entries, label):
         iterator = iterator+1
     return dictionary
 
+def insert_entry(dictionary, key, value, position):
+    """
+    Inserts a new entry into a dictionary at a specific position.
+
+    Parameters:
+    dictionary (dict): The dictionary to insert the entry into.
+    key (str): The key of the new entry.
+    value (any): The value of the new entry.
+    position (int): The position to insert the new entry at.
+    """
+    keys = list(dictionary.keys())
+    values = list(dictionary.values())
+
+    keys.insert(position, key)
+    values.insert(position, value)
+
+    dictionary.clear()
+    dictionary.update(zip(keys, values))
+    #Fucking mutability... we do a return for clarity
+    return dictionary
 
 def voigt_fix_dic(dictionary,models):
     """
@@ -345,44 +365,26 @@ def voigt_fix_dic(dictionary,models):
             # Calculate the FWHM using the Voigt function approximation
             fwhm = 0.5346 * subentry['Lorentz_FWHM'] + np.sqrt(
                 subentry['Gauss_FWHM'] * subentry['Gauss_FWHM'] + 0.2166 * subentry['Lorentz_FWHM'] * subentry['Lorentz_FWHM'])
-            # Insert the 'FWHM' subentry after 'Center'
+            # Insert the 'FWHM' subentry after 'Center'            
             subentry_keys = list(subentry.keys())
             center_index = subentry_keys.index('Center')
-            subentry_keys.insert(center_index + 1, 'FWHM')
-            subentry_values = list(subentry.values())
-            subentry_values.insert(center_index + 1, fwhm)
-            subentry.clear()
-            subentry.update(zip(subentry_keys, subentry_values))
+            subentry=insert_entry(subentry, 'FWHM', fwhm, center_index + 1)
         if models[iter]=="Asy-Sigmoidal-G-L":
              #Correction of the FWHM from both functions in bimodal
             fwhm=subentry['FWHM']*(1+0.40*subentry['Asymmetry']**2+1.35*subentry['Asymmetry']**4)
             subentry_keys = list(subentry.keys())
             center_index = subentry_keys.index('FWHM')
-            subentry_keys.insert(center_index + 1, 'Asymmetric_FWHM')
-            subentry_values = list(subentry.values())
-            subentry_values.insert(center_index + 1, fwhm)
-            subentry.clear()
-            subentry.update(zip(subentry_keys, subentry_values))
+            subentry=insert_entry(subentry, 'Asymmetric_FWHM', fwhm, center_index + 1)
         else:
             if 'Asymmetry' in subentry:
                 #Correction of the FWHM from both functions in bimodal
                 fwhm=subentry['FWHM']/2+subentry['Asymmetry']*subentry['FWHM']/2
                 subentry_keys = list(subentry.keys())
                 center_index = subentry_keys.index('FWHM')
-                subentry_keys.insert(center_index + 1, 'Asymmetric_FWHM')
-                subentry_values = list(subentry.values())
-                subentry_values.insert(center_index + 1, fwhm)
-                subentry.clear()
-                subentry.update(zip(subentry_keys, subentry_values))
+                subentry=insert_entry(subentry, 'Asymmetric_FWHM', fwhm, center_index + 1)
         #Add the model to dictionary:
         model=models[iter]
-        subentry_keys = list(subentry.keys())
-        center_index = subentry_keys.index('Center')
-        subentry_keys.insert(center_index -1, 'Peak Model')
-        subentry_values = list(subentry.values())
-        subentry_values.insert(center_index - 1, model)
-        subentry.clear()
-        subentry.update(zip(subentry_keys, subentry_values))
+        subentry=insert_entry(subentry, 'Peak Model', model, 0)
 
     return dictionary
 

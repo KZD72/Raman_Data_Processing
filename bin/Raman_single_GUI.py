@@ -122,7 +122,7 @@ def main(window_parent):
         popup_window = tk.Toplevel(window)
         popup_window.title("Experiment metadata")
 
-        info = Raman_dataloader.load_spectra_info(path, data_type)
+        info, key = Raman_dataloader.load_spectra_info(path, data_type)
 
         text_widget = tk.Text(popup_window, padx=20, pady=5)
         text_widget.tag_configure("bold", font=("TkDefaultFont", 11, "bold"))
