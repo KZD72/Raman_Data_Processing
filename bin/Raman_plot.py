@@ -331,8 +331,8 @@ def update_plot(canvas, canvas_panel, fig, ax, data):
 
         headers = []
         if len(dat) < 2:
-            headers.append('Wavenumber (1/cm)')
-            headers.append('Raman intensity (1/cm)')
+            headers.append(ax.get_xlabel())
+            headers.append(ax.get_ylabel())
         elif len(dat) < 3:
             headers.append('Wavenumber (1/cm)')
             headers.append('Raman intensity (1/cm)')

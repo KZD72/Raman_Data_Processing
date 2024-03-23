@@ -536,14 +536,14 @@ def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks, updat
     formated_info = "None"
     dialog = None
 
-    def on_close():
-        """
-        Handles the closing event of the main window.
-        Performs necessary cleanup actions before closing the application.
-        """
-        global model_list
-        fit_window.quit()  # Quit the main window event loop
-        fit_window.destroy()  # Destroy the main window
+    # def on_close():
+    #     """
+    #     Handles the closing event of the main window.
+    #     Performs necessary cleanup actions before closing the application.
+    #     """
+    #     global model_list
+    #     fit_window.quit()  # Quit the main window event loop
+    #     fit_window.destroy()  # Destroy the main window
         
 
 
@@ -854,7 +854,7 @@ def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks, updat
     fit_window.geometry("755x900")
     fit_window.resizable(False, False)  # Disable resizing
     fit_window.attributes("-topmost", True)
-    fit_window.protocol("WM_DELETE_WINDOW", on_close)
+    fit_window.protocol("WM_DELETE_WINDOW",lambda: on_popup_close(fit_window))
 
     # Grid layout configuration
     fit_window.grid_columnconfigure(0, weight=1)
