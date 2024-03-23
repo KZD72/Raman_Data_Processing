@@ -214,7 +214,7 @@ def extract_keys(dictionary):
     first_nested_dict = next(iter(fit_results.values()), {})
     
     # Create a dictionary where the keys are the keys of the first nested dictionary and the values are the same as the keys
-    keys_dict = {key: key for key in first_nested_dict.keys()}
+    keys_dict = {key: key for key in first_nested_dict.keys() if key != 'Peak Model'}
 
     return keys_dict
 

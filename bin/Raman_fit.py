@@ -764,10 +764,10 @@ def fit(x,y,peaks,model_type=None):
 
 
     minimizer = Minimizer(objective, pars, fcn_args=(x, y,peaks,model_type))
-    result = minimizer.least_squares(**{'xtol': 1e-6,
-                                   'gtol': 1e-6,
-                                   'ftol':1e-6,
-                                   'max_nfev':50000})
+    result = minimizer.least_squares(**{'xtol': 1e-5,
+                                   'gtol': 1e-5,
+                                   'ftol':1e-5,
+                                   'max_nfev':1e6})
     return result
 
 def fit_info(fit):
