@@ -67,7 +67,7 @@ def lorentz_f(x, a_1=0, a_2=1, a_3=1):
        array-like: The Lorentzian shape evaluated at x.
    """
     gamma = a_2/ 2
-    return (a_3* gamma**2) / ((x - a_1)**2 + gamma**2)
+    return (a_3* gamma) / ((x - a_1)**2 + gamma**2)
 
 
 def gauss_lorentz_f(x, a_0=1, a_1=0, a_2=1, a_3=0):
@@ -589,7 +589,7 @@ def model_f(params, x, peaks,model_type=None):
             function_composed.append(lorentz_f(x,
                                       params['Peak_'+str(item+1)+'_Center'],
                                       params['Peak_'+str(item+1)+'_FWHM'],
-                                      params['Peak_'+str(item+1)+'_Intensity'])
+                                      params['Peak_'+str(item+1)+'_A2'])
                                      )
         elif model_type[item]=="Gauss-Lorentz":
             function_composed.append(gauss_lorentz_f(x,
@@ -720,7 +720,7 @@ def params_f(peaks, model_type=None):
         elif model_type[item]=="Lorentz" :
             params.add('Peak_'+str(item+1)+'_Center', value=peaks[item][0],min=0)
             params.add('Peak_'+str(item+1)+'_FWHM', value=2,min=1)
-            params.add('Peak_'+str(item+1)+'_Intensity', value=peaks[item][1],min=peaks[item][1]/2,max=peaks[item][1]*2)
+            params.add('Peak_'+str(item+1)+'_A2', value=peaks[item][1],min=peaks[item][1]/2,max=peaks[item][1]*2)
         elif model_type[item]=="Gauss-Lorentz":
             params.add('Peak_'+str(item+1)+'_Gaussian_component', value=0.001,min=0,max=1)
             params.add('Peak_'+str(item+1)+'_Center', value=peaks[item][0],min=0)

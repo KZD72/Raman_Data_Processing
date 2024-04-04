@@ -963,7 +963,7 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
         #     button_batch.config(state="disabled")
             
         # deactivate buttons
-        button_clipper.config(state="disabled")
+        #button_clipper.config(state="disabled")
         button_baseline.config(state="disabled")
         button_substract_baseline.config(state="disabled")
         button_peak_detection.config(state="disabled")
