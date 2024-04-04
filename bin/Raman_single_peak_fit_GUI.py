@@ -599,7 +599,7 @@ def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks, updat
                    'Gauss-Lorentz','Voigt','Asy-BiGauss','Asy-BiLorentz','Asy-BiGauss-Lorentz','Asy-Sigmoidal-G-L','Asy-Pearson-IV','Fano-JAC', 'Fano-Simply', 'Fano-Voigt']
 
         combobox = ttk.Combobox(frame, values=options)
-        combobox.set(options[3])
+        combobox.set(options[4])
         model_list.append(combobox)
         combobox.grid(row=position+1, column=3, padx=5, pady=5)
 
