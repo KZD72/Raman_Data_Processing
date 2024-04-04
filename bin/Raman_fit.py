@@ -67,7 +67,7 @@ def lorentz_f(x, a_1=0, a_2=1, a_3=1):
        array-like: The Lorentzian shape evaluated at x.
    """
     gamma = a_2/ 2
-    return (a_3* gamma**2) / ((x - a_1)**2 + gamma**2)
+    return (a_3* gamma) / ((x - a_1)**2 + gamma**2)
 
 
 def gauss_lorentz_f(x, a_0=1, a_1=0, a_2=1, a_3=0):
@@ -325,7 +325,30 @@ def pearson_IV_asy_f(x, a_1=0, a_2=1, a_3=1, q=0, g=1):
     # Return the scaled function, normalized by its maximum value
     return a_3 * (scaled / np.max(scaled))
 
-def fano_f_not_normalised(x, a_1=0, a_2=1, q=1e10):
+# def fano_f_not_normalised(x, a_1=0, a_2=1, q=1e10):
+#     """
+#     Calculate the Fano lineshape without Voigt
+
+#     Parameters:
+#         x (array-like): The input variable.
+#         a_1 (float): The center of the Fano lineshape.
+#         a_2 (float): The Full Width at Half Maximum (FWHM) of the Fano lineshape.
+#         q (float): The asymmetry parameter (Fano factor) determining the shape of the line.
+
+#     Returns:
+#         array-like: The Fano lineshape evaluated at x.
+#     """
+#     gamma = a_2 / 2
+#     epsilon = (x - a_1) / gamma
+
+#     fano_par=q
+
+
+#     unscaled=1-(fano_par+epsilon)**2/(1+epsilon**2)
+
+
+#     return unscaled
+def fano_f_not_normalised(x, a_1=0, a_2=1,a_3=1, q=1e10):
     """
     Calculate the Fano lineshape without Voigt
 
@@ -344,12 +367,11 @@ def fano_f_not_normalised(x, a_1=0, a_2=1, q=1e10):
     fano_par=q
 
 
-    unscaled=1-(fano_par+epsilon)**2/(1+epsilon**2)
+    unscaled=a_3*(fano_par+epsilon)**2/(1+epsilon**2)
 
 
     return unscaled
-
-def fano_f(x, a_1=0, a_2=1, a_3=1, q=1e10):
+def fano_f(x, a_1=0, a_2=1, a_3=1, q=1e10,baseline=0):
     """
     Calculate the Fano lineshape without Voigt
 
@@ -364,15 +386,15 @@ def fano_f(x, a_1=0, a_2=1, a_3=1, q=1e10):
         array-like: The Fano lineshape evaluated at x.
     """
     # Calculate the unnormalized Voigt function
-    fano = fano_f_not_normalised(x, a_1, a_2,q)
+    fano = fano_f_not_normalised(x, a_1, a_2,a_3,q)
 
     # Find the maximum value of the Voigt function at x0
-    max_value = np.maximum(fano_f_not_normalised(a_1, a_1, a_2,q),1e-20)
+    max_value =1 #np.maximum(fano_f_not_normalised(a_1, a_1, a_2,q),1e-20)
 
     # Normalize the Voigt function by dividing by the maximum value
     fano_normalized = fano / max_value
 
-    return fano_normalized*a_3
+    return baseline+fano_normalized
 
 
 def voigt_fano_not_normalised(x, x0, g_FWHM, l_FWHM, q=0):
@@ -418,7 +440,7 @@ def voigt_fano_not_normalised(x, x0, g_FWHM, l_FWHM, q=0):
     return unscaled
 
 
-def voigt_fano_f(x, x0, g_FWHM, l_FWHM, amplitude, q=0):
+def voigt_fano_f(x, x0, g_FWHM, l_FWHM, amplitude, q=0,baseline=0):
      """
      Calculate the normalised Voigt profile using the convolution of the Fano lineshape and a Gaussian.
 
@@ -443,7 +465,7 @@ def voigt_fano_f(x, x0, g_FWHM, l_FWHM, amplitude, q=0):
      # Normalize the Voigt function by dividing by the maximum value
      voigt_fano_normalized = voight_fano / max_value
 
-     return voigt_fano_normalized*amplitude
+     return baseline+voigt_fano_normalized*amplitude
 
 def voigt_fano_not_normalised_num(x, x0, g_FWHM, l_FWHM, q=0):
     """
@@ -502,6 +524,37 @@ def voigt_fano_f_num(x, x0, g_FWHM, l_FWHM, amplitude, q=0):
      voigt_fano_normalized = voight_fano/max_value
 
      return voigt_fano_normalized*amplitude
+ 
+ 
+def fano_f_jac(x, x0=1, FWHM=1, Am=1,q=100, k=0,):
+    """
+    Calculate the Fano lineshape using Julian approach.
+
+    Parameters:
+    x (float or array-like): The points at which to evaluate the Fano lineshape.
+    x0 (float, optional): The center of the Fano lineshape. Defaults to 1.
+    Am (float, optional): The amplitude of the Fano lineshape. Defaults to 1.
+    k (float, optional): The asymmetry parameter. Defaults to 0.
+    FWHM (float, optional): The full width at half maximum of the Fano lineshape. Defaults to 1.
+    q (float, optional): The Fano parameter that describes the interference between resonant and non-resonant scattering processes. Defaults to 100.
+
+    Returns:
+    array-like: The Fano lineshape evaluated at x.
+    """
+    # Calculate the standard deviation from the full width at half maximum
+    sigma = FWHM / 2
+
+    # Calculate the amplitude of the Fano lineshape
+    ampli = Am * k * sigma / (k + 1)
+
+    # Calculate the epsilon parameter
+    epsilon = (x - x0) / (1 + k) / sigma
+
+    # Calculate the quotient for the Fano lineshape
+    quotient = (q/np.sqrt(Am) / k / sigma + epsilon) ** 2 / (1 + epsilon ** 2)
+
+    # Return the Fano lineshape
+    return ampli * (1 + k * quotient)
 
 def model_f(params, x, peaks,model_type=None):
     """
@@ -536,7 +589,7 @@ def model_f(params, x, peaks,model_type=None):
             function_composed.append(lorentz_f(x,
                                       params['Peak_'+str(item+1)+'_Center'],
                                       params['Peak_'+str(item+1)+'_FWHM'],
-                                      params['Peak_'+str(item+1)+'_Intensity'])
+                                      params['Peak_'+str(item+1)+'_A2'])
                                      )
         elif model_type[item]=="Gauss-Lorentz":
             function_composed.append(gauss_lorentz_f(x,
@@ -594,7 +647,16 @@ def model_f(params, x, peaks,model_type=None):
                                       params['Peak_'+str(item+1)+'_Center'],
                                       params['Peak_'+str(item+1)+'_Fano_FWHM'],
                                       params['Peak_'+str(item+1)+'_Intensity'],
-                                      params['Peak_'+str(item+1)+'_Fano_Asymmetry'])
+                                      params['Peak_'+str(item+1)+'_Fano_Asymmetry'],
+                                      params['Peak_'+str(item+1)+'_Fano_baseline'])
+                                     )
+        elif model_type[item]=="Fano-JAC":
+            function_composed.append(fano_f_jac(x,
+                                      params['Peak_'+str(item+1)+'_Center'],
+                                      params['Peak_'+str(item+1)+'_Phonon_FWHM'],
+                                      params['Peak_'+str(item+1)+'_Intensity'],
+                                      params['Peak_'+str(item+1)+'_Fano_Asymmetry'],
+                                      params['Peak_'+str(item+1)+'_Fano_k'])
                                      )
         elif model_type[item]=="Fano-Voigt":
             function_composed.append(voigt_fano_f(x,
@@ -602,7 +664,8 @@ def model_f(params, x, peaks,model_type=None):
                                       params['Peak_'+str(item+1)+'_Gauss_FWHM'],
                                       params['Peak_'+str(item+1)+'_Fano_FWHM'],
                                       params['Peak_'+str(item+1)+'_Intensity'],
-                                      params['Peak_'+str(item+1)+'_Fano_Asymmetry'])
+                                      params['Peak_'+str(item+1)+'_Fano_Asymmetry'],
+                                      params['Peak_'+str(item+1)+'_Fano_baseline'])                                     
                                      )
         # elif model_type[item]=="Fano-Voigt-num":
         #     function_composed.append(voigt_fano_f_num(x,
@@ -657,7 +720,7 @@ def params_f(peaks, model_type=None):
         elif model_type[item]=="Lorentz" :
             params.add('Peak_'+str(item+1)+'_Center', value=peaks[item][0],min=0)
             params.add('Peak_'+str(item+1)+'_FWHM', value=2,min=1)
-            params.add('Peak_'+str(item+1)+'_Intensity', value=peaks[item][1],min=peaks[item][1]/2,max=peaks[item][1]*2)
+            params.add('Peak_'+str(item+1)+'_A2', value=peaks[item][1],min=peaks[item][1]/2,max=peaks[item][1]*2)
         elif model_type[item]=="Gauss-Lorentz":
             params.add('Peak_'+str(item+1)+'_Gaussian_component', value=0.001,min=0,max=1)
             params.add('Peak_'+str(item+1)+'_Center', value=peaks[item][0],min=0)
@@ -698,14 +761,23 @@ def params_f(peaks, model_type=None):
         elif model_type[item]=="Fano-Simply":
             params.add('Peak_'+str(item+1)+'_Center', value=peaks[item][0],min=0)
             params.add('Peak_'+str(item+1)+'_Fano_FWHM', value=2,min=0.1)
-            params.add('Peak_'+str(item+1)+'_Intensity', value=peaks[item][1],min=peaks[item][1]/2,max=peaks[item][1]*2)
-            params.add('Peak_'+str(item+1)+'_Fano_Asymmetry', value=0.001,min=-1e4,max=1e4)
+            params.add('Peak_'+str(item+1)+'_Intensity', value=peaks[item][1],min=0.1,max=1e12)
+            params.add('Peak_'+str(item+1)+'_Fano_Asymmetry', value=10,min=-1e12,max=1e12)
+            params.add('Peak_'+str(item+1)+'_Fano_baseline', value=0.001,min=0,max=1e10)
+        elif model_type[item]=="Fano-JAC":
+            params.add('Peak_'+str(item+1)+'_Center', value=peaks[item][0],min=0)
+            params.add('Peak_'+str(item+1)+'_Phonon_FWHM', value=2,min=0.1)
+            params.add('Peak_'+str(item+1)+'_Intensity', value=peaks[item][1],min=0,max=1e10)
+            params.add('Peak_'+str(item+1)+'_Fano_Asymmetry', value=10,min=-1e10,max=1e10)
+            params.add('Peak_'+str(item+1)+'_Fano_k', value=1,min=0,max=1e6)           
+                                     
         elif model_type[item]=="Fano-Voigt":
             params.add('Peak_'+str(item+1)+'_Center', value=peaks[item][0],min=0)
             params.add('Peak_'+str(item+1)+'_Gauss_FWHM', value=2,min=0.1)
             params.add('Peak_'+str(item+1)+'_Fano_FWHM', value=2,min=0.1)
             params.add('Peak_'+str(item+1)+'_Intensity', value=peaks[item][1],min=peaks[item][1]/2,max=peaks[item][1]*2)
             params.add('Peak_'+str(item+1)+'_Fano_Asymmetry',  value=0.001,min=-1e4,max=1e4)
+            params.add('Peak_'+str(item+1)+'_Fano_baseline', value=0.001,min=0,max=1e6)
         # elif model_type[item]=="Fano-Voigt-num":
         #     params.add('Peak_'+str(item+1)+'_Center', value=peaks[item][0],min=0)
         #     params.add('Peak_'+str(item+1)+'_Gauss_FWHM', value=2,min=0.1)
