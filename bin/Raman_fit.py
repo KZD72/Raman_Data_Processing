@@ -455,8 +455,10 @@ def voigt_fano_f(x, x0, g_FWHM, l_FWHM, amplitude, q=0,baseline=0):
      Returns:
          array-like: The Voigt profile evaluated at x.
      """
+     #Modify q to get the same value as normal
+     qq=-1/q
      # Calculate the unnormalized Voigt function
-     voight_fano = voigt_fano_not_normalised(x, x0, g_FWHM, l_FWHM, q)
+     voight_fano = voigt_fano_not_normalised(x, x0, g_FWHM, l_FWHM, qq)
     
 
      # Find the maximum value of the Voigt function at x0
@@ -514,8 +516,10 @@ def voigt_fano_f_num(x, x0, g_FWHM, l_FWHM, amplitude, q=0):
      Returns:
          array-like: The Voigt profile evaluated at x.
      """
+     #Modify q to get the same value as normal
+     qq=-1/q
      # Calculate the unnormalized Voigt function
-     voight_fano = voigt_fano_not_normalised_num(x, x0, g_FWHM, l_FWHM, q)
+     voight_fano = voigt_fano_not_normalised_num(x, x0, g_FWHM, l_FWHM, qq)
       
      # Find the maximum value of the Voigt function at x0
      max_value = np.maximum(np.max(voight_fano),1e-20)
@@ -775,8 +779,8 @@ def params_f(peaks, model_type=None):
             params.add('Peak_'+str(item+1)+'_Center', value=peaks[item][0],min=0)
             params.add('Peak_'+str(item+1)+'_Gauss_FWHM', value=2,min=0.1)
             params.add('Peak_'+str(item+1)+'_Fano_FWHM', value=2,min=0.1)
-            params.add('Peak_'+str(item+1)+'_Intensity', value=peaks[item][1],min=peaks[item][1]/2,max=peaks[item][1]*2)
-            params.add('Peak_'+str(item+1)+'_Fano_Asymmetry',  value=0.001,min=-1e4,max=1e4)
+            params.add('Peak_'+str(item+1)+'_Intensity', value=peaks[item][1],min=0.1,max=1e12)
+            params.add('Peak_'+str(item+1)+'_Fano_Asymmetry',   value=10,min=-1e12,max=1e12)
             params.add('Peak_'+str(item+1)+'_Fano_baseline', value=0.001,min=0,max=1e6)
         # elif model_type[item]=="Fano-Voigt-num":
         #     params.add('Peak_'+str(item+1)+'_Center', value=peaks[item][0],min=0)
