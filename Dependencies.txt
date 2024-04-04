@@ -1,5 +1,6 @@
 python>=3.8
 multiprocessing
+tendo
 sys
 os
 csv
@@ -11,3 +12,4 @@ numexpr>=2.8.6
 scipy>=1.10.1
 lmfit>=1.2.2
 tkinter>=8.6
+
