@@ -37,6 +37,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 import tkinter as tk  # Import the Tkinter module for GUI
 from tkinter import ttk
 from tkinter import filedialog
+from tkinter import messagebox
 
 
 from bin import Raman_dataloader
@@ -68,6 +69,16 @@ def unit_conv(x):
         DESCRIPTIONthe number in inches
     """
     return x/2.54
+def error(text):
+    """
+    Display an error message based on the given type.
+
+    Args:
+        text (str): The message to show.
+
+
+    """
+    messagebox.showerror("Error", text)
 
 
 def adjust_label_positions(labels, positions, threshold=5, fontsize=6):
@@ -373,6 +384,19 @@ def update_plot(canvas, canvas_panel, fig, ax, data):
        
 
         res_var = create_dropdown(window, res_dict, 2, 0)
+
+         # Create three entry fields in the panel
+        title_entry = ttk.Entry(window)
+        title_entry.insert(0, "Enter title (LaTex allowed)")
+        title_entry.grid(row=3, column=0, sticky="nsew")
+
+        x_label_entry = ttk.Entry(window)
+        x_label_entry.insert(0, "Enter x-axis label (LaTex allowed)")
+        x_label_entry.grid(row=4, column=0, sticky="nsew")
+
+        y_label_entry = ttk.Entry(window)
+        y_label_entry.insert(0, "Enter y-axis label (LaTex allowed)")
+        y_label_entry.grid(row=5, column=0, sticky="nsew")
         
 
         # Create the confirmation button
@@ -381,23 +405,33 @@ def update_plot(canvas, canvas_panel, fig, ax, data):
             size = size_var.get()
             res = int(res_var.get())
 
-            # Set the figure properties
-            set_figure_properties(local_fig, size, res)
+            #Set the title and labels:
+            # Set plot properties
+            try:
+                ax.set_xlabel(r'$' + x_label_entry.get() + '$')
+                ax.set_ylabel(r'$' + y_label_entry.get() + '$')
 
-            # Open a file dialog to save the figure
-            file_path = filedialog.asksaveasfilename(defaultextension=".png",
-                                                    filetypes=[("PNG files", "*.png"), 
-                                                                ("TIFF files", "*.tiff"), 
-                                                                ("EPS files", "*.eps"),
-                                                                ("PDF files", "*.pdf")])
-            if file_path:
-                local_fig.savefig(file_path, dpi=res)
+                ax.set_title(r'$' +title_entry.get()+ '$')
+
+                # Set the figure properties
+                set_figure_properties(local_fig, size, res)
+
+                # Open a file dialog to save the figure
+                file_path = filedialog.asksaveasfilename(defaultextension=".png",
+                                                        filetypes=[("PNG files", "*.png"), 
+                                                                    ("TIFF files", "*.tiff"), 
+                                                                    ("EPS files", "*.eps"),
+                                                                    ("PDF files", "*.pdf")])
+                if file_path:
+                    local_fig.savefig(file_path, dpi=res)
+            except:
+                error("Error in LaTex format, not saved")
 
             # Close the window
             window.destroy()
 
         confirm_button = tk.Button(window, text="Confirm", command=confirm)
-        confirm_button.grid(row=3, column=0, padx=10, pady=10, sticky='nsew')
+        confirm_button.grid(row=6, column=0, padx=10, pady=10, sticky='nsew')
     
 
    # Define the button styles

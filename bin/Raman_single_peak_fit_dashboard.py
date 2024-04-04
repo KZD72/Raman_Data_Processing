@@ -522,15 +522,15 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
 
         # Create three entry fields in the panel
         title_entry = ttk.Entry(panel)
-        title_entry.insert(0, "Enter title")
+        title_entry.insert(0, "Enter title (LaTex allowed)")
         title_entry.grid(row=0, column=0, sticky="nsew")
 
         x_label_entry = ttk.Entry(panel)
-        x_label_entry.insert(0, "Enter x-axis label")
+        x_label_entry.insert(0, "Enter x-axis label (LaTex allowed)")
         x_label_entry.grid(row=1, column=0, sticky="nsew")
 
         y_label_entry = ttk.Entry(panel)
-        y_label_entry.insert(0, "Enter y-axis label")
+        y_label_entry.insert(0, "Enter y-axis label (LaTex allowed)")
         y_label_entry.grid(row=2, column=0, sticky="nsew")
 
         update_plot = tk.Button(panel, text="Update", command=update_inner_plot)
@@ -542,19 +542,23 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
         global peaks,peak_1_sel,window_width,peak_params_sel,peak_2_sel
 
         def update_inner_plot():
-                if isinstance(x_label_entry.get(), str) and isinstance(y_label_entry.get(), str) and isinstance(title_entry.get(), str) :      
+                if isinstance(x_label_entry.get(), str) and isinstance(y_label_entry.get(), str) and isinstance(title_entry.get(), str) :     
+                    
+                    try:
                 
-                    fig, ax = Raman_plot.plotter(plots_to_show,
-                                                    [x_label_entry.get(),
-                                                    y_label_entry.get()],
-                                                    title_entry.get(),                                            
-                                                    lines=False,
-                                                    res=150,
-                                                    size="",
-                                                    leyends=peak_params_sel.get(),
-                                                    leyend_frame=[True, 'b']
-                                                    )
-                    Raman_plot.update_plot(new_canvas, new_canvas_panel, fig, ax, plots_to_show)
+                        fig, ax = Raman_plot.plotter(plots_to_show,
+                                                        [r'$' + x_label_entry.get() + '$',
+                                                        r'$' + y_label_entry.get() + '$'],
+                                                        r'$' +title_entry.get()+ '$',                                            
+                                                        lines=False,
+                                                        res=150,
+                                                        size="",
+                                                        leyends=peak_params_sel.get(),
+                                                        leyend_frame=[True, 'b']
+                                                        )
+                        Raman_plot.update_plot(new_canvas, new_canvas_panel, fig, ax, plots_to_show)
+                    except:
+                        error("Error in LaTex format")    
                 else:
                     error("Labels must be strings")
 
