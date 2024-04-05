@@ -1,0 +1,1 @@
+pyinstaller --onefile --add-data "C:\Users\Admin\Documents\GitHub\Raman_Data_Processing\Resources;Resources" --icon="C:\Users\Admin\Documents\GitHub\Raman_Data_Processing\Resources\Icon0.ico" Raman_main_launcher.py

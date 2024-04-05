@@ -32,6 +32,7 @@ import numpy as np
 import os
 import csv
 import re
+import sys
 # Import FigureCanvasTkAgg class and NavigationToolbar2Tk from matplotlib
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 import tkinter as tk  # Import the Tkinter module for GUI
@@ -42,6 +43,15 @@ from tkinter import messagebox
 
 from bin import Raman_dataloader
 
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 
 def replace_invalid_characters(input_string):
     # Define a regular expression pattern to match invalid characters
@@ -118,8 +128,8 @@ def create_dropdown(master, dictionary, row, column):
 def plotter(data_list, labels, title, error=None, lines=True, leyends=None, size=None, res=None, arrow=None, text=None, leyend_frame=[False, False]):
 
     # Edit the style
-    local_path = os.path.dirname(os.path.abspath(__file__))
-    style_file = os.path.join(local_path, 'plotstyle.mplstyle')  # APS style
+    
+    style_file =  resource_path("Resources\plotstyle.mplstyle")  # APS style
     plt.style.use(style_file)
     line_type = ['-', '--', ':']  # intial dashlines
     
