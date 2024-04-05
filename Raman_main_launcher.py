@@ -33,7 +33,15 @@ import sys
 
 from bin import Raman_single_GUI
 ############################################################
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
 
+    return os.path.join(base_path, relative_path)
 
 def main_window():
     # Area to create the main window
@@ -90,11 +98,10 @@ def main_window():
         button_bg_4 = ImageTk.PhotoImage(image4)
 
     # Get the path to the image files
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    image1_path = os.path.join(current_dir, "Resources", "Icon2.PNG")
-    image2_path = os.path.join(current_dir, "Resources", "Icon3.PNG")
-    image3_path = os.path.join(current_dir, "Resources", "Icon4.PNG")
-    image4_path = os.path.join(current_dir, "Resources", "Icon5.PNG")
+    image1_path = resource_path("Resources/Icon2.PNG")
+    image2_path = resource_path("Resources/Icon3.PNG")
+    image3_path = resource_path("Resources/Icon4.PNG")
+    image4_path = resource_path("Resources/Icon5.PNG")
 
     # Load the images
     button_bg_1 = None
