@@ -23,12 +23,11 @@ Module to create a lateral panel in the single peak GUI to analyse the data
 """
 
 # Raman_lateralpanel
-import numpy as np
+from numpy import zeros, where, abs, searchsorted, insert, genfromtxt, ndarray, isnan, isinf, array, min, max, savetxt, argsort, asarray, isin
 import tkinter as tk
 from tkinter import ttk, filedialog
 from tkinter import messagebox
 import os
-from tqdm import tqdm
 import time
 
 from bin import Raman_dataloader
@@ -348,7 +347,7 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
     peak_value = 0.01
     peak_val = []
     peaks = []
-    bas_man_points = np.zeros((2, 2))
+    bas_man_points = zeros((2, 2))
     smoothing_window = 10
     peak_sep = 4
     peak_promi = 0.05
@@ -460,8 +459,8 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
 
         # get arrows:
 
-        point_index_list = [np.where(raw_x == bas_man_points[item, 0])[0][0] for item in range(
-            len(bas_man_points[:, 0])) if len(np.where(raw_x == bas_man_points[item, 0])[0]) > 0]
+        point_index_list = [where(raw_x == bas_man_points[item, 0])[0][0] for item in range(
+            len(bas_man_points[:, 0])) if len(where(raw_x == bas_man_points[item, 0])[0]) > 0]
 
         arrow_data = [(
             point_index_list[item],
@@ -509,15 +508,15 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
 
                 # Find the index where the point should be inserted based on x
 
-                res = np.abs((raw_x[0]-raw_x[1])/2)
+                res = abs((raw_x[0]-raw_x[1])/2)
                 index = Raman_datahandling.wavenumber_to_index(
                     raw_x, point, res)
 
                 insert_point = [raw_x[index], raw_y[index]]
 
-                insert_index = np.searchsorted(
+                insert_index = searchsorted(
                     bas_man_points[:, 0], insert_point[0])
-                bas_man_points = np.insert(
+                bas_man_points = insert(
                     bas_man_points, insert_index, insert_point, axis=0)
 
                 baseline_type = "Manual"
@@ -553,11 +552,12 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
 
             raw_x, raw_y = data_clipper(raw_dat, spectral_window)
 
-            bas_man_points = np.zeros((2, 2))
+            bas_man_points = zeros((2, 2))
             bas_man_points[0] = [raw_dat[0, 0], raw_dat[0, 1]]
             bas_man_points[-1] = [raw_dat[-1, 0], raw_dat[-1, 1]]
 
             update_baseline(raw_x, raw_y, bas_man_points, 'linear')
+            button_baseline.config(state="normal")
             button_substract_baseline.config(state="disabled")
             button_peak_detection.config(state="disabled")
             button_manual_peak_adding.config(state="disabled")
@@ -577,38 +577,38 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
         filepath = filedialog.askopenfilename(filetypes=[("CSV Files", "*.csv"), (
             "TXT Files", "*.txt")])
         if filepath != '':
-            data = np.genfromtxt(filepath, dtype=float, delimiter=' ')
+            data = genfromtxt(filepath, dtype=float, delimiter=' ')
 
         c1 = check_spectral_window(initial_spectral_window, [
                                    field_low_k.get(), field_upp_k.get()])
-        if isinstance(data, np.ndarray):
-            c2 = np.array([not (str(val).isalpha() or np.isnan(val)
-                                or np.isinf(val)) for val in data])
+        if isinstance(data, ndarray):
+            c2 = array([not (str(val).isalpha() or isnan(val)
+                                or isinf(val)) for val in data])
         else:
-            data = np.array([data])
-            c2 = np.array([not (str(val).isalpha() or np.isnan(val)
-                                or np.isinf(val)) for val in data])
+            data = array([data])
+            c2 = array([not (str(val).isalpha() or isnan(val)
+                                or isinf(val)) for val in data])
 
         # Missing all error control
         if c1 and c2.all():
-            c3 = np.min(data) >= float(field_low_k.get()) and np.max(
+            c3 = min(data) >= float(field_low_k.get()) and max(
                 data) <= float(field_upp_k.get())
 
             if c3:
                 raw_x, raw_y = data_clipper(raw_dat, spectral_window)
-                bas_man_points = np.zeros((2, 2))
+                bas_man_points = zeros((2, 2))
                 bas_man_points[0] = [raw_x[0], raw_y[0]]
                 bas_man_points[-1] = [raw_x[-1], raw_y[-1]]
 
-                res = np.abs((raw_x[0]-raw_x[1])/2)
+                res = abs((raw_x[0]-raw_x[1])/2)
                 index = [Raman_datahandling.wavenumber_to_index(
                     raw_x, point, res) for point in data]
 
                 for item in index:
                     insert_point = [raw_x[item], raw_y[item]]
-                    insert_index = np.searchsorted(
+                    insert_index = searchsorted(
                         bas_man_points[:, 0], insert_point[0])
-                    bas_man_points = np.insert(
+                    bas_man_points = insert(
                         bas_man_points, insert_index, insert_point, axis=0)
 
                 update_baseline(raw_x, raw_y, bas_man_points, model_type)
@@ -635,11 +635,11 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
         if filepath != '':
             if len(bas_man_points[:, 0]) > 2:
                 # Save the vector to a text file
-                np.savetxt(
+                savetxt(
                     filepath, bas_man_points[1:-1, 0], fmt="%d", delimiter=" ")
                 print(bas_man_points[1:-1, 0])
             else:
-                np.savetxt(filepath, [], fmt="%d", delimiter=" ")
+                savetxt(filepath, [], fmt="%d", delimiter=" ")
 
     def baseline_model_selection(event=None):
         global x_baseline, y_baseline, bas_man_points
@@ -717,7 +717,7 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
         global x_baseline, y_baseline, info, normalise_check
         normalise_check = True
 
-        y_baseline = y_baseline/np.max(y_baseline)
+        y_baseline = y_baseline/max(y_baseline)
         dat = [[x_baseline, y_baseline]]
         if silent:
             fig, ax = Raman_plot.plotter(dat,
@@ -760,7 +760,7 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
                                                            distance=peak_sep)
 
             peak_mag = [y_baseline[peak] for peak in peaks]
-            sorted_indices = np.argsort(peak_mag)[::-1]
+            sorted_indices = argsort(peak_mag)[::-1]
             peaks = [peaks[item] for item in sorted_indices]
             peak_val = [[x_baseline[peaks[item]], y_baseline[peaks[item]]]
                         for item in range(len(peaks)) if item < peak_number_control]
@@ -817,7 +817,7 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
 
             if c2:
                 # Convert peak_val to a NumPy array
-                np_peaks = np.asarray(peak_val)
+                np_peaks = asarray(peak_val)
 
                 # Check if np_peaks is not empty
                 if np_peaks.size:
@@ -825,14 +825,14 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
                     x_peak = np_peaks[:, 0]
 
                     # Check if the new peak is already in x_peak
-                    c3 = np.isin(p, x_peak)
+                    c3 = isin(p, x_peak)
                 else:
                     c3 = False
 
                 # If the new peak is not already in x_peak
                 if not c3:
                     # Find the index of the new peak in x_baseline
-                    index = np.searchsorted(np.asarray(x_baseline), p)
+                    index = searchsorted(asarray(x_baseline), p)
 
                     # Add the new peak to peak_val and peaks
                     peak_val.append([p, y_baseline[index]])
@@ -964,7 +964,7 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
             
         # deactivate buttons
         #button_clipper.config(state="disabled")
-        button_baseline.config(state="disabled")
+        #button_baseline.config(state="disabled")
         button_substract_baseline.config(state="disabled")
         button_peak_detection.config(state="disabled")
         button_manual_peak_adding.config(state="disabled")
@@ -1114,18 +1114,18 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
                         raw_x, raw_y = data_clipper(raw_dat, spectral_window)
                         # Look for the datapoints in ech set of data:
 
-                        bas_man_points = np.zeros((2, 2))
+                        bas_man_points = zeros((2, 2))
                         bas_man_points[0] = [raw_x[0], raw_y[0]]
                         bas_man_points[-1] = [raw_x[-1], raw_y[-1]]
-                        res = np.abs((raw_x[0]-raw_x[1])/4)
+                        res = abs((raw_x[0]-raw_x[1])/4)
                         index = [Raman_datahandling.wavenumber_to_index(
                             raw_x, point, res) for point in new_x_baseline]
 
                         for element in index:
                             insert_point = [raw_x[element], raw_y[element]]
-                            insert_index = np.searchsorted(
+                            insert_index = searchsorted(
                                 bas_man_points[:, 0], insert_point[0])
-                            bas_man_points = np.insert(
+                            bas_man_points = insert(
                                 bas_man_points, insert_index, insert_point, axis=0)
 
                         model_type = str(baseline_model.get())

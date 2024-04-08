@@ -24,7 +24,7 @@ Library to import data
 # Raman_dataloader.py
 
 
-import numpy as np
+from numpy import array, empty_like, transpose, argsort, expand_dims
 import tkinter as tk
 import numexpr as ne
 
@@ -98,24 +98,24 @@ def reorder_data(arr,multiple=False, transpose=False, squeeze=False):
     numpy.ndarray: The reordered array where rows are sorted based on the values in the first column.
     """
     # Convert arr to a NumPy array if it's not already
-    arr_inner = np.array(arr)
+    arr_inner = array(arr)
   
     if squeeze:
         # Remove single-dimensional entries from the shape of the array
-        arr_inner = np.array(arr[0])
-    sorted_array=np.empty_like(arr_inner)
+        arr_inner = array(arr[0])
+    sorted_array=empty_like(arr_inner)
     if multiple:
         for i in range(arr_inner.shape[0]):
             # Get the (2, m) slice
-            slice_arr = np.array(arr[i])
+            slice_arr = array(arr[i])
             if transpose:
-                slice_arr=np.transpose(slice_arr)
+                slice_arr=transpose(slice_arr)
 
             # Get the indices that would sort the first column
-            sorted_indices = np.argsort(slice_arr[:, 0])  # Note the [::-1] to reverse the order
+            sorted_indices = argsort(slice_arr[:, 0])  # Note the [::-1] to reverse the order
 
             if transpose:
-                out=np.transpose(slice_arr[sorted_indices])
+                out=transpose(slice_arr[sorted_indices])
             else:
                 out=slice_arr[sorted_indices]
 
@@ -123,16 +123,16 @@ def reorder_data(arr,multiple=False, transpose=False, squeeze=False):
             sorted_array[i] = out
     else:
         if transpose:
-            slice_arr=np.transpose(arr_inner)
+            slice_arr=transpose(arr_inner)
         # Get the indices that would sort the first column
-        sorted_indices = np.argsort(arr_inner[:, 0]) # Note the [::-1] to reverse the order
+        sorted_indices = argsort(arr_inner[:, 0]) # Note the [::-1] to reverse the order
         # Use the sorted indices to reorder the entire array
         sorted_array = arr_inner[sorted_indices]
         if transpose:
-            sorted_array=np.transpose(sorted_array)
+            sorted_array=transpose(sorted_array)
    
     if squeeze:
-        sorted_array=np.expand_dims(sorted_array, axis=0)
+        sorted_array=expand_dims(sorted_array, axis=0)
 
     return sorted_array
 
@@ -147,24 +147,24 @@ def reorder_data_descending(arr,multiple=False, transpose=False, squeeze=False):
     numpy.ndarray: The reordered array where rows are sorted based on the values in the first column.
     """
     # Convert arr to a NumPy array if it's not already
-    arr_inner = np.array(arr)
+    arr_inner = array(arr)
 
     if squeeze:
         # Remove single-dimensional entries from the shape of the array
-        arr_inner = np.array(arr[0])
-    sorted_array=np.empty_like(arr_inner)
+        arr_inner = array(arr[0])
+    sorted_array=empty_like(arr_inner)
     if multiple:
         for i in range(arr_inner.shape[0]):
             # Get the (2, m) slice
-            slice_arr = np.array(arr[i])
+            slice_arr = array(arr[i])
             if transpose:
-                slice_arr=np.transpose(slice_arr)
+                slice_arr=transpose(slice_arr)
 
             # Get the indices that would sort the first column
-            sorted_indices = np.argsort(slice_arr[:, 0])[::-1]  # Note the [::-1] to reverse the order
+            sorted_indices = argsort(slice_arr[:, 0])[::-1]  # Note the [::-1] to reverse the order
 
             if transpose:
-                out=np.transpose(slice_arr[sorted_indices])
+                out=transpose(slice_arr[sorted_indices])
             else:
                 out=slice_arr[sorted_indices]
 
@@ -172,16 +172,16 @@ def reorder_data_descending(arr,multiple=False, transpose=False, squeeze=False):
             sorted_array[i] = out
     else:
         if transpose:
-            slice_arr=np.transpose(arr_inner)
+            slice_arr=transpose(arr_inner)
         # Get the indices that would sort the first column
-        sorted_indices = np.argsort(arr_inner[:, 0])[::-1]  # Note the [::-1] to reverse the order
+        sorted_indices = argsort(arr_inner[:, 0])[::-1]  # Note the [::-1] to reverse the order
         # Use the sorted indices to reorder the entire array
         sorted_array = arr_inner[sorted_indices]
         if transpose:
-            sorted_array=np.transpose(sorted_array)
+            sorted_array=transpose(sorted_array)
    
     if squeeze:
-        sorted_array=np.expand_dims(sorted_array, axis=0)
+        sorted_array=expand_dims(sorted_array, axis=0)
     
     return sorted_array
 
@@ -332,7 +332,7 @@ def load_spectra_data_horiba(path):
 
                 counts.append(robust_float(dat[0]))
 
-    data = np.transpose(np.array((wavenumber, counts), dtype='float64'))
+    data = transpose(array((wavenumber, counts), dtype='float64'))
     data=reorder_data(data)
     return data
 
@@ -381,7 +381,7 @@ def load_spectra_data_bwtech(filename):
                     wavenumber.append(robust_float(x))
                     counts.append(robust_float(y))
 
-    data =  np.transpose(np.array((wavenumber, counts), dtype='float64'))
+    data =  transpose(array((wavenumber, counts), dtype='float64'))
     data=reorder_data(data)
     return data
 
@@ -455,7 +455,7 @@ def load_spectra_data_brukkerIR(filename):
                 # Convert the line to a float and store the result in y_values
                 y_values.append(float(line))
 
-    data =  np.transpose(np.array((x_values, y_values), dtype='float64'))
+    data =  transpose(array((x_values, y_values), dtype='float64'))
     data=reorder_data(data)
     return data
 

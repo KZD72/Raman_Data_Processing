@@ -24,9 +24,9 @@ Created on Thu Jun 29 10:05:19 2023
 
 import tkinter as tk
 
-from tkinter import ttk
+from tkinter import Tk,ttk
 from PIL import ImageTk, Image
-import os
+from os import path
 from tendo import singleton
 import multiprocessing
 import sys
@@ -39,14 +39,14 @@ def resource_path(relative_path):
         # PyInstaller creates a temp folder and stores path in _MEIPASS
         base_path = sys._MEIPASS
     except Exception:
-        base_path = os.path.abspath(".")
+        base_path = path.abspath(".")
 
-    return os.path.join(base_path, relative_path)
+    return path.join(base_path, relative_path)
 
 def main_window():
     # Area to create the main window
-    window = tk.Tk()
-    window.title('Raman_Data_Processing_V6 JAC')
+    window = Tk()
+    window.title('Raman_Data_Processing_JAC')
     window.geometry("500x500")
     window.resizable(False, False)  # Disable resizing
     window.attributes("-topmost", False)

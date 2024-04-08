@@ -22,7 +22,8 @@ Created on Thu Jun 22 16:13:16 2023
 
 # Raman_datahandling
 
-import numpy as np
+from numpy import abs, mean, sort, searchsorted, minimum, max, column_stack, asarray, concatenate, ones_like
+from numpy import argsort, ones, std, clip, exp, diff, eye, allclose, sqrt, array, empty_like, transpose, expand_dims, where, sign, append
 from scipy.signal import savgol_filter
 from scipy.signal import find_peaks as sp_find_peaks
 from scipy.sparse import spdiags
@@ -55,18 +56,18 @@ def smooth_spectra(x, y, window_size, poly_order,deriv_order=0):
     smoothed_y = savgol_filter(y, window_size, poly_order,deriv=deriv_order, delta=y[1] - y[0])
     return [x, smoothed_y]
 def set_below_threshold(arr, threshold):
-    arr[np.abs(arr) < threshold] = 0
+    arr[abs(arr) < threshold] = 0
     return arr
 def local_avg(y,peak,window):
     if peak-window>=0 and peak+window<=len(y)-1 :
-        avg_l=np.mean(y[peak-window:peak])
-        avg_r=np.mean(y[peak:peak+window])
+        avg_l=mean(y[peak-window:peak])
+        avg_r=mean(y[peak:peak+window])
     elif  peak-window<0 and peak+window<=len(y)-1:
-        avg_l=np.mean(y[0-window:peak])
-        avg_r=np.mean(y[peak:peak+window])
+        avg_l=mean(y[0-window:peak])
+        avg_r=mean(y[peak:peak+window])
     elif peak-window>=0 and peak+window>len(y)-1 :
-        avg_l=np.mean(y[peak-window:peak])
-        avg_r=np.mean(y[peak:len(y)-1])
+        avg_l=mean(y[peak-window:peak])
+        avg_r=mean(y[peak:len(y)-1])
     return avg_l,avg_r
 
 def neighbours(y, array, n):
@@ -82,10 +83,10 @@ def neighbours(y, array, n):
         list: A list containing the closest smaller and closest bigger elements.
 
     """
-    sorted_arr = np.sort(array)
+    sorted_arr = sort(array)
 
     # Find index for insertion
-    insert_index = np.searchsorted(sorted_arr, n)
+    insert_index = searchsorted(sorted_arr, n)
 
     # Find closest smaller and closest bigger elements
     if insert_index - 1 > 0 and insert_index + 1 < len(array) - 1:
@@ -121,7 +122,7 @@ def peak_classification(y, peak, window):
 
     """
     avg_l, avg_r = local_avg(y, peak, window)
-    min_avd = np.minimum(avg_l, avg_r)
+    min_avd = minimum(avg_l, avg_r)
 
     if y[peak] > min_avd:
         return 1  # Return 1 if it is a local maximum
@@ -143,10 +144,10 @@ def find_maxmin(x, y, window):
 
     """
     x_d, y_d = smooth_spectra(x, y, window, 2, 1)  # Derivative
-    #tol = np.max(y_d) / 10000  # All with a very small derivative is filtered
+    #tol = max(y_d) / 10000  # All with a very small derivative is filtered
     #y_filter = set_below_threshold(y_d, tol)
 
-    peaks = np.where(np.diff(np.sign(y_d)) != 0)[0] + 1
+    peaks = where(diff(sign(y_d)) != 0)[0] + 1
 
     return [peak for peak in peaks]
 
@@ -171,7 +172,7 @@ def find_peaks_alt(x, y, window,threshold):
 
     #Get maximum value for peak
     peak_values=[y[peak] for peak in peaks]
-    max_peak=np.max(peak_values)
+    max_peak=max(peak_values)
     filter_peaks=[peaks[item] for item in range(len(peak_values)) if peak_values[item]/(max_peak+1e-12)>threshold]
     return filter_peaks, valleys
 
@@ -197,7 +198,7 @@ def find_peaks(x, y, window, threshold, prominence=None,distance=None):
     # Smooth the spectrum
     x_d, smoothed = smooth_spectra(x, y, window, 2, deriv_order=0)
 
-    smoothed=smoothed/np.max(smoothed)
+    smoothed=smoothed/max(smoothed)
 
     # Find peaks in the smoothed data
     peaks, _ = sp_find_peaks(smoothed, prominence=prominence, distance=distance)
@@ -205,7 +206,7 @@ def find_peaks(x, y, window, threshold, prominence=None,distance=None):
     # Get maximum value for peak
     peak_values = [y[peak] for peak in peaks]
 
-    max_peak = np.max(peak_values)
+    max_peak = max(peak_values)
 
     # Filter peaks based on the threshold
     filter_peaks = [peaks[item] for item in range(len(peak_values)) if (peak_values[item] / (max_peak + 1e-12) > threshold) ]
@@ -273,7 +274,7 @@ def peak_side_ratio(x,peak,boundaries):
 
 def peak_type_clasification(x, y_wobaseline,peaks):
     def inner_class(val):
-        val_co=np.abs(1-val)
+        val_co=abs(1-val)
         if val_co<0.05:
             return False
         else:
@@ -289,11 +290,11 @@ def peak_type_clasification(x, y_wobaseline,peaks):
                  for peak in peaks]
     peak_boun_e=[inner_class(peak_side_ratio(x,peak,peak_asymmetry_index(x, y_wobaseline,peak,0.95)))
                  for peak in peaks]
-    output=np.column_stack((np.asarray(peak_boun_a),
-                             np.asarray(peak_boun_b),
-                             np.asarray(peak_boun_c),
-                             np.asarray(peak_boun_d),
-                             np.asarray(peak_boun_e)
+    output=column_stack((asarray(peak_boun_a),
+                             asarray(peak_boun_b),
+                             asarray(peak_boun_c),
+                             asarray(peak_boun_d),
+                             asarray(peak_boun_e)
                              ))
     print(output)
 
@@ -320,7 +321,7 @@ def find_window(x, y, peak, window):
     """
     x_d, y_d = smooth_spectra(x, y, window, 2, 1)  # Derivative
     peaks, valleys = find_peaks(x_d, y_d, window)
-    combined = np.concatenate((peaks, valleys))
+    combined = concatenate((peaks, valleys))
     out = neighbours(y, combined, peak)
 
     return out
@@ -339,7 +340,7 @@ def exclude_indexes(x, y, exclude_indexes):
         tuple: A tuple containing the filtered x and y arrays.
 
     """
-    mask = np.ones_like(x, dtype=bool)
+    mask = ones_like(x, dtype=bool)
 
     for exclusion_range in exclude_indexes:
         start_index, end_index = exclusion_range
@@ -364,7 +365,7 @@ def fit_piecewise_spline_with_interpolation(x, y, ignore_regions):
 
     filter_x,filter_y=exclude_indexes(x, y, ignore_regions)
     # Sort the data points by x-values (if not already sorted)
-    sorted_indices = np.argsort(filter_x)
+    sorted_indices = argsort(filter_x)
     x_sorted = filter_x[sorted_indices]
     y_sorted = filter_y[sorted_indices]
 
@@ -426,14 +427,14 @@ def baseline_arPLS(y, ratio=1e-6, lam=1e5, niter=1000, full_output=False):
         raise ValueError("Input spectrum `y` must have a length greater than or equal to 3.")
 
     # Create the difference matrix D for calculating the second derivative
-    diag = np.ones(L - 2)
+    diag = ones(L - 2)
     D = sparse.spdiags([diag, -2 * diag, diag], [0, -1, -2], L, L - 2)
 
     # Calculate the smoothing matrix H using the difference matrix D
     H = lam * D.dot(D.T)
 
     # Initialize the weights and the weight matrix W
-    w = np.ones(L)
+    w = ones(L)
     W = sparse.spdiags(w, 0, L, L)
 
     crit = 1
@@ -450,13 +451,13 @@ def baseline_arPLS(y, ratio=1e-6, lam=1e5, niter=1000, full_output=False):
         dn = d[d < 0]
 
         # Calculate the mean and standard deviation of the negative residuals
-        m = np.mean(dn)
-        s = np.std(dn)
+        m = mean(dn)
+        s = std(dn)
 
        # Calculate the updated weights based on the exponential decay weighting
         exp_input = 2 * (d - (2 * s - m)) / s
-        exp_input = np.clip(exp_input, -500, 500)  # Clip the values to a manageable range
-        w_new = 1 / (1 + np.exp(exp_input))
+        exp_input = clip(exp_input, -500, 500)  # Clip the values to a manageable range
+        w_new = 1 / (1 + exp(exp_input))
 
         # Calculate the convergence criterion
         crit = norm(w_new - w) / norm(w)
@@ -520,16 +521,16 @@ The Whittaker Smoother algorithm is effective in removing baseline variations in
 
     """
     n = len(y)
-    d = np.diff(np.eye(n), differences)
-    w = np.ones(n)
+    d = diff(eye(n), differences)
+    w = ones(n)
 
     for i in range(10):
         W = spdiags(w, 0, n, n)
         Z = W + lambda_ * d.dot(d.transpose())
         z = spsolve(Z, w * y)
-        w_new = 1.0 / (np.abs(y - z) + 1e-6)
+        w_new = 1.0 / (abs(y - z) + 1e-6)
 
-        if np.allclose(w, w_new):
+        if allclose(w, w_new):
             break
         w = w_new
 
@@ -546,9 +547,9 @@ def snr(y):
    Returns:
    The calculated SNR value.
    """
-    avg = np.mean(y)
-    dif = np.sqrt((y-avg)**2)
-    snr = np.mean(dif)
+    avg = mean(y)
+    dif = sqrt((y-avg)**2)
+    snr = mean(dif)
 
     return snr
 
@@ -572,12 +573,12 @@ def compute_snr(data, window_size):
         num_windows = len(data) - window_size + 1
 
     # Calculate the SNR for each window
-    window_snr = np.array([snr(data[i:i+window_size]) for i in range(num_windows)], dtype=object)
-    window_snr = np.append(window_snr, snr(data[num_windows:]))
+    window_snr = array([snr(data[i:i+window_size]) for i in range(num_windows)], dtype=object)
+    window_snr = append(window_snr, snr(data[num_windows:]))
 
     # Get the smallest SNR value
-    min_snr = np.min(window_snr)
-    max_snr = np.max(window_snr)
+    min_snr = min(window_snr)
+    max_snr = max(window_snr)
 
     return min_snr, max_snr
 
@@ -663,12 +664,12 @@ def wavenumber_to_index(y, wn, tol):
 
     """
     max_attempts = 20
-    index = np.where(np.abs(y - wn) < tol)[0]
+    index = where(abs(y - wn) < tol)[0]
 
     attempts = 0
     while len(index) == 0 and attempts < max_attempts:
         wn += 1  # Increase the wavenumber value
-        index = np.where(np.abs(y - wn) < tol)[0]
+        index = where(abs(y - wn) < tol)[0]
         attempts += 1
 
     if len(index) == 0:
@@ -689,7 +690,7 @@ def test_fit(path,window):
     y_fix=y-y_baseline
 
     if norm:
-        y_fix=y_fix/np.max(y_fix)+0
+        y_fix=y_fix/max(y_fix)+0
 
     peaks,valleys=find_peaks(x,y_fix,10,0.05)
     peak_val=[[x[peak],y_fix[peak]] for peak in peaks]
@@ -765,7 +766,7 @@ def test_prep(iterator,norm=False):
     y_fix=y-y_baseline
 
     if norm:
-        y_fix=y_fix/np.max(y_fix)+iterator
+        y_fix=y_fix/max(y_fix)+iterator
 
     peaks,valleys=find_peaks(x,y_fix,5,0.05)
 
@@ -889,7 +890,7 @@ def test4():
     # new_y=Raman_fit.model_f(fitting.params, x,peak_val,model_list)
 
     #labelling of peaks
-    norm_y=y_fix/np.max(y_fix)
+    norm_y=y_fix/max(y_fix)
     arrow_data=[(
         peaks[item],
         peak_val[item][1]
