@@ -25,18 +25,13 @@ This creates a smple GUI for the single peak fitting panel dashboard
 # Raman_single_peak_fit_dashboard
 
 import tkinter as tk
-import numpy as np
+from numpy import nan, linspace, array, log10, isnan, where, genfromtxt, any, logspace
 import time
-import re
+
 from tkinter import ttk, filedialog
 from tkinter import messagebox
-import os
-import scipy.integrate as spi
-import csv
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-
 from bin import Raman_dataloader
-from bin import Raman_fit
 from bin import Raman_plot
 
 
@@ -253,11 +248,11 @@ def recover_values(dict1_value, dict2, window, key_to_recover):
                 else:
                     # If a peak has already been found, issue a warning
                     error(f"Warning: More than one peak detected in the window for key {key}.")
-                    recovered_values[key] = np.nan
+                    recovered_values[key] = nan
                     
             
             if not key in recovered_values: 
-                recovered_values[key] = np.nan
+                recovered_values[key] = nan
                 
 
     return recovered_values, peak_found
@@ -283,20 +278,20 @@ def create_range(range_type, start, end, n):
     if range_type == 'Linear':
         try:
     
-            values = np.linspace(start, end, num=n)
+            values = linspace(start, end, num=n)
         except:
             key=False
-            values=np.array([])
+            values=array([])
             error("Add a valid range")
 
     elif range_type == 'Log (base 10)':
         try:            
-            values = np.logspace(np.log10(start), np.log10(end), num=n, base=10)
+            values = logspace(log10(start), log10(end), num=n, base=10)
             print("log 10 val")
             print(values)
         except:
             key=False
-            values=np.array([])
+            values=array([])
             error("Add a valid range")
         
     return values, key
@@ -312,13 +307,13 @@ def get_nan_indices(y_list):
     list: A list of indices where y_list is NaN.
     """
     # Convert the list to a numpy array
-    y_array = np.array(y_list)
+    y_array = array(y_list)
 
     # Get a boolean array that is True where y_array is NaN
-    is_nan = np.isnan(y_array)
+    is_nan = isnan(y_array)
 
     # Get the indices where y_array is NaN
-    nan_indices = np.where(is_nan)[0]
+    nan_indices = where(is_nan)[0]
 
     return nan_indices.tolist()
 
@@ -367,8 +362,14 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
                 text_widget.insert(
                     "end", f"Peak {peak_number}:" + "\n", "bold")
                 for parameter, value in parameters.items():
-                    text_widget.insert(
-                        "end", f"{parameter}: {value}" + "\n", "bold")
+                    try:
+                        # Try to convert str_value to a float and format it in scientific notation
+                        num_value = float(value)
+                        text_widget.insert("end", f"{parameter}: {num_value:.6e}\n\n", "bold")
+                    except ValueError:
+                        # If str_value cannot be converted to a float, insert it as is
+                        text_widget.insert("end", f"{parameter}: {value}\n\n", "bold")
+                
                 text_widget.insert("end", "\n", "bold")
         button_full_fit_info.config(state="normal")
         
@@ -570,9 +571,9 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
             filepath = filedialog.askopenfilename(filetypes=[("CSV Files", "*.csv"), (
             "TXT Files", "*.txt")])
             if filepath != '':
-                data = np.genfromtxt(filepath, dtype=float, delimiter=' ')
+                data = genfromtxt(filepath, dtype=float, delimiter=' ')
                 print(data.shape)
-            if data.ndim == 1 and len(data) == len(inner_y) and not np.any(np.isnan(data)):
+            if data.ndim == 1 and len(data) == len(inner_y) and not any(isnan(data)):
                 key=True
                 x_list=data
             else:

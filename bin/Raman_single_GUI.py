@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 """
-Spyder Editor
-
 This is a GUI to load and plot the data for a single peak analysis
 
 @author:  J.Anaya
@@ -28,7 +26,7 @@ This is a GUI to load and plot the data for a single peak analysis
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import tkinter as tk  # Import the Tkinter module for GUI
 from tkinter import ttk, filedialog, font
-import numpy as np
+from numpy import arange
 from tkinter import messagebox
 import matplotlib.pyplot as plt
 import matplotlib
@@ -70,7 +68,7 @@ def main(window_parent):
     get_fields_data = []
     variation_data = []
     graph_type = ["linear", "linear"]
-    foo_x = np.arange(100)
+    foo_x = arange(100)
     foo_y = Raman_fit.lorentz_f(foo_x, 10, 5, 1)+Raman_fit.lorentz_f(
         foo_x, 20, 10, 2)+Raman_fit.lorentz_f(foo_x, 50, 10, 10)
     fig, ax = Raman_plot.plotter([[foo_x, foo_y]],
