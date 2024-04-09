@@ -28,7 +28,7 @@ Module to create simple plots
 # Raman_plot.py
 
 import matplotlib.pyplot as plt
-from numpy import abs, sign, array, min, max, transpose, linspace, sin
+import numpy as np
 import os
 import csv
 import re
@@ -96,15 +96,15 @@ def adjust_label_positions(labels, positions, threshold=5, fontsize=6):
 
     for i in range(len(labels)):
         for j in range(i + 1, len(labels)):
-            if abs(adjusted_positions[i] - adjusted_positions[j]) < threshold:
+            if np.abs(adjusted_positions[i] - adjusted_positions[j]) < threshold:
                 offset = threshold - \
-                    abs(adjusted_positions[i] - adjusted_positions[j])
-                sign = sign(adjusted_positions[j] - adjusted_positions[i])
+                    np.abs(adjusted_positions[i] - adjusted_positions[j])
+                sign = np.sign(adjusted_positions[j] - adjusted_positions[i])
                 adjusted_positions[i] -= sign * offset / 2
                 adjusted_positions[j] += sign * offset / 2
 
     for i in range(len(labels)):
-        if i > 0 and abs(adjusted_positions[i] - adjusted_positions[i-1]) < threshold:
+        if i > 0 and np.abs(adjusted_positions[i] - adjusted_positions[i-1]) < threshold:
             adjusted_positions[i] = max(
                 adjusted_positions[i-1] + threshold, adjusted_positions[i])
 
@@ -135,7 +135,7 @@ def plotter(data_list, labels, title, error=None, lines=True, leyends=None, size
     
     marker_type = ['o', '^', 'v', '<', '>','s', 'd', 'p', 'h', '*']
 
-    data = array(data_list, dtype=object)
+    data = np.array(data_list, dtype=object)
     # Get the default color cycle from matplotlib
     default_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
@@ -240,8 +240,8 @@ def plotter(data_list, labels, title, error=None, lines=True, leyends=None, size
         legend.get_frame().set_facecolor('lightgray')
 
     if arrow is not None:
-        ax.set_ylim([1.2*min([min(iter[1]) for iter in data]),
-                    1.5*max([max(iter[1]) for iter in data])])
+        ax.set_ylim([1.2*np.min([np.min(iter[1]) for iter in data]),
+                    1.5*np.max([np.max(iter[1]) for iter in data])])
         peak_positions = [data[0][0][arrow_data[0]] for arrow_data in arrow]
         peak_values = [arrow_data[1] for arrow_data in arrow]
 
@@ -321,15 +321,15 @@ def update_plot(canvas, canvas_panel, fig, ax, data):
         if xmin > xmax:  # If the x-axis is inverted
             ax.invert_xaxis()  # Invert it back
             dat=data            
-            canvas.draw()
+        canvas.draw()
     
     def reverse_axes():
         global dat
         xmin, xmax = ax.get_xlim()  # Get the current limits
         if xmin < xmax:  # If the x-axis is inverted
-            ax.invert_xaxis()  # This will reverse the x-axis
-            canvas.draw()
+            ax.invert_xaxis()  # This will reverse the x-axis            
             dat=Raman_dataloader.reorder_data_descending(data,multiple=True,transpose=True)
+        canvas.draw()
             
            
                 
@@ -368,7 +368,7 @@ def update_plot(canvas, canvas_panel, fig, ax, data):
             with open(file_path.name, "w", newline='') as csvfile:
                 writer = csv.writer(csvfile)
                 writer.writerow(headers)  # Write the headers as the first row
-                writer.writerows(transpose(rows))  # Write the rows of data
+                writer.writerows(np.transpose(rows))  # Write the rows of data
 
     def save_high_res_image():
         local_fig=fig
@@ -488,8 +488,8 @@ def update_plot(canvas, canvas_panel, fig, ax, data):
 
 def plotterTest():
     # Generate sample data
-    x = linspace(0, 10, 100)
-    y = sin(x)
+    x = np.linspace(0, 10, 100)
+    y = np.sin(x)
     std = 0.2*y  # Standard deviation of y
 
     return plotter([[x, y, std], [x, y, 0]], ["X", "Y"], "Foo graph", size="double_size")
@@ -510,8 +510,8 @@ def plotterTest2():
 
 def test_3():
     # Sample data
-    x = linspace(0, 10, 100)
-    y = sin(x)
+    x = np.linspace(0, 10, 100)
+    y = np.sin(x)
 
     # Create an arrow data list
     arrow_data = [

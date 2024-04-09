@@ -25,7 +25,7 @@ This creates a smple GUI for the single peak fitting panel dashboard
 # Raman_single_peak_fit_dashboard
 
 import tkinter as tk
-from numpy import nan, linspace, array, log10, isnan, where, genfromtxt, any, logspace
+import numpy as np
 import time
 
 from tkinter import ttk, filedialog
@@ -248,11 +248,11 @@ def recover_values(dict1_value, dict2, window, key_to_recover):
                 else:
                     # If a peak has already been found, issue a warning
                     error(f"Warning: More than one peak detected in the window for key {key}.")
-                    recovered_values[key] = nan
+                    recovered_values[key] = np.nan
                     
             
             if not key in recovered_values: 
-                recovered_values[key] = nan
+                recovered_values[key] = np.nan
                 
 
     return recovered_values, peak_found
@@ -278,20 +278,20 @@ def create_range(range_type, start, end, n):
     if range_type == 'Linear':
         try:
     
-            values = linspace(start, end, num=n)
+            values = np.linspace(start, end, num=n)
         except:
             key=False
-            values=array([])
+            values=np.array([])
             error("Add a valid range")
 
     elif range_type == 'Log (base 10)':
         try:            
-            values = logspace(log10(start), log10(end), num=n, base=10)
+            values = np.logspace(np.log10(start), np.log10(end), num=n, base=10)
             print("log 10 val")
             print(values)
         except:
             key=False
-            values=array([])
+            values=np.array([])
             error("Add a valid range")
         
     return values, key
@@ -307,13 +307,13 @@ def get_nan_indices(y_list):
     list: A list of indices where y_list is NaN.
     """
     # Convert the list to a numpy array
-    y_array = array(y_list)
+    y_array = np.array(y_list)
 
     # Get a boolean array that is True where y_array is NaN
-    is_nan = isnan(y_array)
+    is_nan = np.isnan(y_array)
 
     # Get the indices where y_array is NaN
-    nan_indices = where(is_nan)[0]
+    nan_indices = np.where(is_nan)[0]
 
     return nan_indices.tolist()
 
@@ -571,9 +571,9 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
             filepath = filedialog.askopenfilename(filetypes=[("CSV Files", "*.csv"), (
             "TXT Files", "*.txt")])
             if filepath != '':
-                data = genfromtxt(filepath, dtype=float, delimiter=' ')
+                data = np.genfromtxt(filepath, dtype=float, delimiter=' ')
                 print(data.shape)
-            if data.ndim == 1 and len(data) == len(inner_y) and not any(isnan(data)):
+            if data.ndim == 1 and len(data) == len(inner_y) and not np.any(np.isnan(data)):
                 key=True
                 x_list=data
             else:

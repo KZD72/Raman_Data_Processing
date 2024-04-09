@@ -25,7 +25,7 @@ This creates a smple GUI for the single peak fitting panel
 # Raman_single_peak_fit_GUI
 
 import tkinter as tk
-from numpy import array,zeros,nan,sqrt,asarray,searchsorted,power,mean,trapz
+import numpy as np
 import time
 import re
 from tkinter import ttk
@@ -111,7 +111,7 @@ def dict_to_list(dictionary):
     Returns:
         numpy.ndarray: The NumPy array containing the dictionary values.
     """
-    return array(list(dictionary.values()), dtype=object)
+    return np.array(list(dictionary.values()), dtype=object)
 
 
 def pad_dictionary(dictionary):
@@ -177,14 +177,14 @@ def calculate_quotients(raw_dictionary, param):
     # Get the parameters from the first key
     params = list(dictionary[keys[0]].keys())
     # Create a 2D array of values from the dictionary
-    values = array([list(dictionary[key].values())
+    values = np.array([list(dictionary[key].values())
                       for key in keys], dtype='float64')
 
     # Find the index of the specified parameter
     param_index = params.index(param)
 
     # Initialize an array to store the quotients
-    quotients = zeros((len(keys), len(keys)), dtype=object)
+    quotients = np.zeros((len(keys), len(keys)), dtype=object)
 
     # Calculate the quotients
     for i in range(len(keys)):
@@ -193,9 +193,9 @@ def calculate_quotients(raw_dictionary, param):
                 quotients[:, i] = values[:, param_index] / \
                     values[i, param_index]
             else:
-                quotients[:, i] = nan
+                quotients[:, i] = np.nan
         else:
-            quotients[:, i] = nan
+            quotients[:, i] = np.nan
 
     return quotients, keys, params
 
@@ -362,7 +362,7 @@ def voigt_fix_dic(dictionary,models):
         
         if 'Gauss_FWHM' in subentry and 'Lorentz_FWHM' in subentry:           
             # Calculate the FWHM using the Voigt function approximation
-            fwhm = 0.5346 * subentry['Lorentz_FWHM'] + sqrt(
+            fwhm = 0.5346 * subentry['Lorentz_FWHM'] + np.sqrt(
                 subentry['Gauss_FWHM'] * subentry['Gauss_FWHM'] + 0.2166 * subentry['Lorentz_FWHM'] * subentry['Lorentz_FWHM'])
             # Insert the 'FWHM' subentry after 'Center'            
             subentry_keys = list(subentry.keys())
@@ -426,7 +426,7 @@ def extract_peak_info(text):
 
 def batch_fit(canvas, canvas_panel, info, x, y, peaks, file_path,models=[], silent=False):
     # Extract peak positions and models from UI elements
-    np_peaks = asarray(peaks, dtype='float64')
+    np_peaks = np.asarray(peaks, dtype='float64')
     peak_positions = [np_peaks[i, 0] for i in range(len(np_peaks))]
 
     # Only Gauss-Lorentz for now
@@ -434,7 +434,7 @@ def batch_fit(canvas, canvas_panel, info, x, y, peaks, file_path,models=[], sile
         models = ['Gauss-Lorentz' for item in peak_positions]
   
     # Find the index corresponding to each peak position
-    index = [searchsorted(asarray(x, dtype='float64'), peak)
+    index = [np.searchsorted(np.asarray(x, dtype='float64'), peak)
              for peak in peak_positions]
 
     # Get the y values at the index positions
@@ -475,7 +475,7 @@ def batch_fit(canvas, canvas_panel, info, x, y, peaks, file_path,models=[], sile
         new_model[item] = models[item]
 
         if new_model[item] != 'Not used':
-            plots_to_show.append(array([x, Raman_fit.model_f(
+            plots_to_show.append(np.array([x, Raman_fit.model_f(
                 fitting.params, x, peak_info, new_model)], dtype='object'))
             leyend.append("P"+str(item+1)+"_"+peak_final_label[inner_iter])
             inner_iter = inner_iter+1
@@ -487,14 +487,14 @@ def batch_fit(canvas, canvas_panel, info, x, y, peaks, file_path,models=[], sile
             result, error = spi.quad(f, x[0], x[-1])
             int_val.append(result)
             # Extract the FWHM of the voight profile:
-    plots_to_show.append(array([x,[fitting.params['baseline'].value for item in x]], dtype='object'))
+    plots_to_show.append(np.array([x,[fitting.params['baseline'].value for item in x]], dtype='object'))
     leyend.append("Baseline")
     # add the integrated intesity to dictionary:
 
     formated_info = expanded_dict(
         formated_info, int_val, 'Integrated Intensity')
     r_2 = 1-(fitting.residual**2).sum() / \
-        (sum(power(y-mean(y), 2)))
+        (sum(np.power(y-np.mean(y), 2)))
     formated_info = expanded_dict(
                 formated_info, [r_2 for item in int_val], 'Pearson_coeff')
     # Add the FWHM if I have a voigt profile:
@@ -529,7 +529,7 @@ def batch_fit(canvas, canvas_panel, info, x, y, peaks, file_path,models=[], sile
 ###############################################################################
 def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks, update_model_list):
     global peak_list_entries, peak_labels, info_fit, time_stamp, formated_info, dialog #model_list
-    np_peaks = asarray(peaks, dtype='float64')
+    np_peaks = np.asarray(peaks, dtype='float64')
     x_peak = np_peaks[:, 0]
     y_peak = np_peaks[:, 1]
     peak_labels = ["{:.2f}".format(peak) for peak in x_peak]
@@ -624,7 +624,7 @@ def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks, updat
             models = [model.get() for model in model_list]
             update_model_list(models)
             # Find the index corresponding to each peak position
-            index = [searchsorted(asarray(x, dtype='float64'), peak)
+            index = [np.searchsorted(np.asarray(x, dtype='float64'), peak)
                      for peak in peak_positions]
 
             # Get the y values at the index positions
@@ -656,7 +656,7 @@ def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks, updat
             y_fit = Raman_fit.model_f(fitting.params, x, peak_info, models)
             # r2:
             r_2 = 1-(fitting.residual**2).sum() / \
-                (sum(power(y-mean(y), 2)))
+                (sum(np.power(y-np.mean(y), 2)))
             text_widget_2.insert(
                 "end", f"Fit r²={r_2}, check fit details for more info.\n\n", "bold")
             # Plots
@@ -676,7 +676,7 @@ def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks, updat
                 new_model[item] = models[item]
 
                 if new_model[item] != 'Not used':
-                    plots_to_show.append(array([x, Raman_fit.model_f(
+                    plots_to_show.append(np.array([x, Raman_fit.model_f(
                         fitting.params, x, peak_info, new_model)], dtype='object'))
                     leyend.append("P"+str(item+1)+"_" +
                                   peak_final_label[inner_iter])
@@ -688,10 +688,10 @@ def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks, updat
                     #     return Raman_fit.model_f(fitting.params, x, peak_info, new_model)
 
                     # result, error = spi.quad(f, x[0], x[-1])
-                    result=trapz(Raman_fit.model_f(fitting.params, x, peak_info, new_model))
+                    result=np.trapz(Raman_fit.model_f(fitting.params, x, peak_info, new_model))
                     int_val.append(result)
                     # Extract the FWHM of the voight profile:
-            plots_to_show.append(array([x,[fitting.params['baseline'].value for item in x]], dtype='object'))
+            plots_to_show.append(np.array([x,[fitting.params['baseline'].value for item in x]], dtype='object'))
             leyend.append("Baseline")
             # add the integrated intesity to dictionary:
 
