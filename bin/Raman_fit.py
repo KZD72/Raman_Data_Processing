@@ -24,7 +24,7 @@ Library with all functions to fit Raman data once baseline is removed
 """
 
 # Raman_fit
-from numpy import sqrt, log, exp, maximum, real, imag, where, power, array, convolve, linspace, pi, arctan
+import numpy as np
 from scipy.special import wofz
 import lmfit
 from lmfit import Parameters, Minimizer
@@ -48,8 +48,8 @@ def gauss_f(x, a_1=0, a_2=1, a_3=1):
     Returns:
         array-like: The Gaussian shape evaluated at x.
     """
-    sigma = a_2 / (2 * sqrt(2 * log(2)))
-    return a_3 * exp(-((x - a_1)**2) / (2 * sigma**2))
+    sigma = a_2 / (2 * np.sqrt(2 * np.log(2)))
+    return a_3 * np.exp(-((x - a_1)**2) / (2 * sigma**2))
 
 
 def lorentz_f(x, a_1=0, a_2=1, a_3=1):
@@ -121,18 +121,18 @@ def voigt_f_not_normalised(x, x0, g_FWHM, l_FWHM):
     """
 
     x_i = x - x0
-    alpha = maximum(g_FWHM / 2,1e-4)
-    gamma =maximum(l_FWHM / 2,1e-4)
-    sigma = alpha / sqrt(2 * log(2))
+    alpha = np.maximum(g_FWHM / 2,1e-4)
+    gamma =np.maximum(l_FWHM / 2,1e-4)
+    sigma = alpha / np.sqrt(2 * np.log(2))
 
     # Calculate the complex argument for the Faddeeva function
-    z = (x_i + 1j * gamma) / sigma / sqrt(2)
+    z = (x_i + 1j * gamma) / sigma / np.sqrt(2)
 
     # Evaluate the Faddeeva function to compute the Voigt function
     faddeeva = wofz(z)
 
     # Compute the real part of the Faddeeva function and normalize by the standard deviation
-    voigt = real(faddeeva) / sigma / sqrt(2 * pi)
+    voigt = np.real(faddeeva) / sigma / np.sqrt(2 * np.pi)
 
     return voigt
 def voigt_f(x, x0, g_FWHM, l_FWHM,amplitude):
@@ -154,7 +154,7 @@ def voigt_f(x, x0, g_FWHM, l_FWHM,amplitude):
     voigt = voigt_f_not_normalised(x, x0, g_FWHM, l_FWHM)
 
     # Find the maximum value of the Voigt function at x0
-    max_value = maximum(voigt_f_not_normalised(x0, x0, g_FWHM, l_FWHM),1e-20)
+    max_value = np.maximum(voigt_f_not_normalised(x0, x0, g_FWHM, l_FWHM),1e-20)
 
     # Normalize the Voigt function by dividing by the maximum value
     voigt_normalized = voigt / max_value
@@ -186,7 +186,7 @@ def gauss_lorentz_asy_f(x, a_0=1, a_1=0, a_2=1, a_3=0, q=0):
     
     x_new = x-a_1
    
-    sigmoidal_damped_perturbation=(1 - q * ((x_new) / a_2) * exp(-1*((x_new) ** 2) / (2 * (2*a_2) ** 2)))
+    sigmoidal_damped_perturbation=(1 - q * ((x_new) / a_2) * np.exp(-1*((x_new) ** 2) / (2 * (2*a_2) ** 2)))
     
     # Compute the Gaussian part of the pseudo-Voigt function
     scaled=gauss_lorentz_f(x_new*sigmoidal_damped_perturbation, a_0, 0, a_2, a_3)
@@ -220,10 +220,10 @@ def bi_gauss_lorentz(x, a_1=0, a_2=1, a_3=0, q=0):
     mask = x < a_1
     
     # Use the mask to select f1 for x < a_1 and f2 for x >= a_1
-    unscaled = where(mask, f1, f2)
+    unscaled = np.where(mask, f1, f2)
 
     # Scale the function so its maximum value is a_3
-    scaled = unscaled*a_3# * unscaled / max(unscaled)
+    scaled = unscaled*a_3# * unscaled / np.max(unscaled)
 
     # Return the scaled function
     return scaled
@@ -254,10 +254,10 @@ def bi_gauss_gauss(x, a_1=0, a_2=1, a_3=0, q=0):
     mask = x < a_1
     
     # Use the mask to select f1 for x < a_1 and f2 for x >= a_1
-    unscaled = where(mask, f1, f2)
+    unscaled = np.where(mask, f1, f2)
 
     # Scale the function so its maximum value is a_3
-    scaled = unscaled*a_3# * unscaled / max(unscaled)
+    scaled = unscaled*a_3# * unscaled / np.max(unscaled)
 
     # Return the scaled function
     return scaled
@@ -288,10 +288,10 @@ def bi_lorentz_lorentz(x, a_1=0, a_2=1, a_3=0, q=0):
     mask = x < a_1
     
     # Use the mask to select f1 for x < a_1 and f2 for x >= a_1
-    unscaled = where(mask, f1, f2)
+    unscaled = np.where(mask, f1, f2)
 
     # Scale the function so its maximum value is a_3
-    scaled = unscaled*a_3# * unscaled / max(unscaled)
+    scaled = unscaled*a_3# * unscaled / np.max(unscaled)
 
     # Return the scaled function
     return scaled
@@ -316,13 +316,13 @@ def pearson_IV_asy_f(x, a_1=0, a_2=1, a_3=1, q=0, g=1):
     lor = (1 + ((x - a_1) / a_2) ** 2)
 
     # Compute the perturbation to introduce asymmetry
-    perturbation = exp(-q * arctan((x - a_1) / a_2))
+    perturbation = np.exp(-q * np.arctan((x - a_1) / a_2))
     
     # Scale the Lorentzian part by the perturbation and the shape parameter g
-    scaled = power(lor, g) * perturbation
+    scaled = np.power(lor, g) * perturbation
 
     # Return the scaled function, normalized by its maximum value
-    return a_3 * (scaled / max(scaled))
+    return a_3 * (scaled / np.max(scaled))
 
 # def fano_f_not_normalised(x, a_1=0, a_2=1, q=1e10):
 #     """
@@ -388,7 +388,7 @@ def fano_f(x, a_1=0, a_2=1, a_3=1, q=1e10,baseline=0):
     fano = fano_f_not_normalised(x, a_1, a_2,a_3,q)
 
     # Find the maximum value of the Voigt function at x0
-    max_value =1 #maximum(fano_f_not_normalised(a_1, a_1, a_2,q),1e-20)
+    max_value =1 #np.maximum(fano_f_not_normalised(a_1, a_1, a_2,q),1e-20)
 
     # Normalize the Voigt function by dividing by the maximum value
     fano_normalized = fano / max_value
@@ -417,19 +417,19 @@ def voigt_fano_not_normalised(x, x0, g_FWHM, l_FWHM, q=0):
     """
 
     x_i = x - x0
-    alpha = maximum(g_FWHM / 2,1e-4)
-    gamma =maximum(l_FWHM / 2,1e-4)
-    sigma = alpha / sqrt(2 * log(2))
+    alpha = np.maximum(g_FWHM / 2,1e-4)
+    gamma =np.maximum(l_FWHM / 2,1e-4)
+    sigma = alpha / np.sqrt(2 * np.log(2))
 
     # Calculate the complex argument for the Faddeeva function
-    z = (x_i + 1j * gamma) / sigma / sqrt(2)
+    z = (x_i + 1j * gamma) / sigma / np.sqrt(2)
 
     # Evaluate the Faddeeva function to compute the Voigt function
     faddeeva = wofz(z)
 
     # Compute the real part of the Faddeeva function and normalize by the standard deviation
-    voigt_r = real(faddeeva)#/ sigma / sqrt(2 * pi)
-    voigt_imag = imag(faddeeva)# / sigma / sqrt(2 * pi)
+    voigt_r = np.real(faddeeva)#/ sigma / np.sqrt(2 * np.pi)
+    voigt_imag = np.imag(faddeeva)# / sigma / np.sqrt(2 * np.pi)
 
     fano_par=q
 
@@ -461,7 +461,7 @@ def voigt_fano_f(x, x0, g_FWHM, l_FWHM, amplitude, q=0,baseline=0):
     
 
      # Find the maximum value of the Voigt function at x0
-     max_value = maximum(max(voight_fano),1e-20)
+     max_value = np.maximum(np.max(voight_fano),1e-20)
 
      # Normalize the Voigt function by dividing by the maximum value
      voigt_fano_normalized = voight_fano / max_value
@@ -484,13 +484,13 @@ def voigt_fano_not_normalised_num(x, x0, g_FWHM, l_FWHM, q=0):
     """
     
     # Generate the Gaussian function
-    gauss = array(gauss_f(x, x0, g_FWHM, 1))
+    gauss = np.array(gauss_f(x, x0, g_FWHM, 1))
     
     # Generate the Fano function
-    fano = array(fano_f(x, x0, l_FWHM, 1, q))
+    fano = np.array(fano_f(x, x0, l_FWHM, 1, q))
     
     # Perform the convolution
-    full_convolution = convolve(gauss, fano, mode='same')#signal.convolve(gauss, fano, mode='same')
+    full_convolution = np.convolve(gauss, fano, mode='same')#signal.convolve(gauss, fano, mode='same')
     # Compute the start index for the 'same' mode
     start_index = (full_convolution.size // 2) - (gauss.size // 2)
 
@@ -522,7 +522,7 @@ def voigt_fano_f_num(x, x0, g_FWHM, l_FWHM, amplitude, q=0, baseline=0):
      voight_fano = voigt_fano_not_normalised_num(x, x0, g_FWHM, l_FWHM, qq)
       
      # Find the maximum value of the Voigt function at x0
-     max_value = maximum(max(voight_fano),1e-20)
+     max_value = np.maximum(np.max(voight_fano),1e-20)
 
      # Normalize the Voigt function by dividing by the maximum value
      voigt_fano_normalized = voight_fano/max_value
@@ -555,7 +555,7 @@ def fano_f_jac(x, x0=1, FWHM=1, Am=1,q=100, k=0,):
     epsilon = (x - x0) / (1 + k) / sigma
 
     # Calculate the quotient for the Fano lineshape
-    quotient = (q/sqrt(Am) / k / sigma + epsilon) ** 2 / (1 + epsilon ** 2)
+    quotient = (q/np.sqrt(Am) / k / sigma + epsilon) ** 2 / (1 + epsilon ** 2)
 
     # Return the Fano lineshape
     return ampli * (1 + k * quotient)
@@ -692,7 +692,7 @@ def model_f(params, x, peaks,model_type=None):
         
         
   
-    peak_term=params['baseline']+sum(function_composed,
+    peak_term=params['baseline']+np.sum(function_composed,
                 axis=0)
     
     
@@ -874,7 +874,7 @@ def test():
 
 
     # Generate example data
-    x = linspace(0, 2000, 1000)
+    x = np.linspace(0, 2000, 1000)
     y =voigt_f(x, 500, 50,50,1)#-voigt_fano_f(x,500, 50,50,1, -1/5) #fano_f(x,40, 4, 1,1/8)+voigt_fano_f(x, 80, 4,4, 1,1/8) # True underlying function
 
     peaks=[[500,10]]#,[60.5,40000],[80,40000]]
