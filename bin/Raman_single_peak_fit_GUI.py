@@ -484,7 +484,7 @@ def batch_fit(canvas, canvas_panel, info, x, y, peaks, file_path,models=[], sile
 
             def f(x):
                 return Raman_fit.model_f(fitting.params, x, peak_info, new_model)
-            result, error = spi.quad(f, x[0], x[-1])
+            result, error = spi.quad(f-fitting.params['baseline'].value, x[0], x[-1])
             int_val.append(result)
             # Extract the FWHM of the voight profile:
     plots_to_show.append(np.array([x,[fitting.params['baseline'].value for item in x]], dtype='object'))
@@ -688,7 +688,7 @@ def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks, updat
                     #     return Raman_fit.model_f(fitting.params, x, peak_info, new_model)
 
                     # result, error = spi.quad(f, x[0], x[-1])
-                    result=np.trapz(Raman_fit.model_f(fitting.params, x, peak_info, new_model))
+                    result=np.trapz(Raman_fit.model_f(fitting.params, x, peak_info, new_model)-fitting.params['baseline'].value)
                     int_val.append(result)
                     # Extract the FWHM of the voight profile:
             plots_to_show.append(np.array([x,[fitting.params['baseline'].value for item in x]], dtype='object'))
