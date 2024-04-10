@@ -25,6 +25,6 @@ Enjoy using the Raman Spectra Analysis Tool!
 
 ## Binaries
 
-Either clone the repo and run it in Python 3.10 or download the .exe for Windows (64bit) from this link:
+Either clone the repo and run it in Python 3.10 or download the .exe for Windows (64bit) from the Releases link:
 
-https://drive.google.com/file/d/1Ns37ijg7mT_NTIRVxT2LpqXgfZlyRX0S/view?usp=drive_link
+(https://github.com/KZD72/Raman_Data_Processing/releases)
