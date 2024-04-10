@@ -218,7 +218,7 @@ def main(window_parent):
 
     # Area to create the main window
     window = tk.Toplevel(window_parent)
-    window.title('Raman_Peak_Processing_V6 JAC')
+    window.title('Single_Raman_Peak_Processing_V1.0_JAC')
     window.geometry("1600x900")
 
     # minimize the launcher:

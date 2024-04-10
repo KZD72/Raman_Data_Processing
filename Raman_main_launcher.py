@@ -46,7 +46,7 @@ def resource_path(relative_path):
 def main_window():
     # Area to create the main window
     window = Tk()
-    window.title('Raman_Data_Processing_JAC')
+    window.title('Raman_Data_Processing_V1.0')
     window.geometry("500x500")
     window.resizable(False, False)  # Disable resizing
     window.attributes("-topmost", False)
