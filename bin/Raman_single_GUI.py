@@ -187,8 +187,6 @@ def main(window_parent):
            
             # Call the lateral panel:
             # default values for the global variables
-            print(filepath)
-            print(data_type)
             buttonCall(filepath,time)
             raw_dat, key = Raman_dataloader.load_spectra_data(filepath, data_type)  
                 

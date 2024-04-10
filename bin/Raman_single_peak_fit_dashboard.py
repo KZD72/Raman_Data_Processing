@@ -287,8 +287,8 @@ def create_range(range_type, start, end, n):
     elif range_type == 'Log (base 10)':
         try:            
             values = np.logspace(np.log10(start), np.log10(end), num=n, base=10)
-            print("log 10 val")
-            print(values)
+            #print("log 10 val")
+            #print(values)
         except:
             key=False
             values=np.array([])
@@ -572,7 +572,7 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
             "TXT Files", "*.txt")])
             if filepath != '':
                 data = np.genfromtxt(filepath, dtype=float, delimiter=' ')
-                print(data.shape)
+                #print(data.shape)
             if data.ndim == 1 and len(data) == len(inner_y) and not np.any(np.isnan(data)):
                 key=True
                 x_list=data
