@@ -187,8 +187,6 @@ def main(window_parent):
            
             # Call the lateral panel:
             # default values for the global variables
-            print(filepath)
-            print(data_type)
             buttonCall(filepath,time)
             raw_dat, key = Raman_dataloader.load_spectra_data(filepath, data_type)  
                 
@@ -220,7 +218,7 @@ def main(window_parent):
 
     # Area to create the main window
     window = tk.Toplevel(window_parent)
-    window.title('Raman_Peak_Processing_V6 JAC')
+    window.title('Single_Raman_Peak_Processing_V1.0_JAC')
     window.geometry("1600x900")
 
     # minimize the launcher:
