@@ -431,7 +431,7 @@ def batch_fit(canvas, canvas_panel, info, x, y, peaks, file_path,models=[], sile
 
     # Only Gauss-Lorentz for now
     if len(models)!=len(peak_positions):
-        models = ['Gauss-Lorentz' for item in peak_positions]
+        models = ['Voigt' for item in peak_positions]
   
     # Find the index corresponding to each peak position
     index = [np.searchsorted(np.asarray(x, dtype='float64'), peak)
@@ -446,12 +446,12 @@ def batch_fit(canvas, canvas_panel, info, x, y, peaks, file_path,models=[], sile
 
     # Launch the fitting process
     # Clear previous fit information
-
+  
     fitting = Raman_fit.fit(x, y, peak_info, models)
 
     # Get fit info
     info_fit = Raman_fit.fit_info(fitting)
-
+    
     # Get fit data
     y_fit = Raman_fit.model_f(fitting.params, x, peak_info, models)
 
@@ -467,7 +467,7 @@ def batch_fit(canvas, canvas_panel, info, x, y, peaks, file_path,models=[], sile
 
     peak_final_label = [
         f'{params["Center"]:.1f}'for params in formated_info.values()]
-
+    
     int_val = []
     inner_iter = 0
     for item in range(len(models)):
@@ -481,10 +481,8 @@ def batch_fit(canvas, canvas_panel, info, x, y, peaks, file_path,models=[], sile
             inner_iter = inner_iter+1
             # Get the integral:
             # Define the function to be integrated
-
-            def f(x):
-                return Raman_fit.model_f(fitting.params, x, peak_info, new_model)
-            result, error = spi.quad(f-fitting.params['baseline'].value, x[0], x[-1])
+            print(fitting.params['baseline'].value)
+            result=np.trapz(Raman_fit.model_f(fitting.params, x, peak_info, new_model)-fitting.params['baseline'].value)
             int_val.append(result)
             # Extract the FWHM of the voight profile:
     plots_to_show.append(np.array([x,[fitting.params['baseline'].value for item in x]], dtype='object'))
@@ -493,15 +491,17 @@ def batch_fit(canvas, canvas_panel, info, x, y, peaks, file_path,models=[], sile
 
     formated_info = expanded_dict(
         formated_info, int_val, 'Integrated Intensity')
+    
     r_2 = 1-(fitting.residual**2).sum() / \
         (sum(np.power(y-np.mean(y), 2)))
     formated_info = expanded_dict(
                 formated_info, [r_2 for item in int_val], 'Pearson_coeff')
+   
     # Add the FWHM if I have a voigt profile:
     formated_info = voigt_fix_dic(formated_info,models)
     # print(formated_info)
     # Update plot
-
+    
     result_dict = {info['Title']: {'title':info['Title'],
                                    'leyends': leyend,
                                    'plots_to_show': plots_to_show, 
@@ -522,7 +522,7 @@ def batch_fit(canvas, canvas_panel, info, x, y, peaks, file_path,models=[], sile
                                 leyend_frame=[True, 'b']
                                 )
         Raman_plot.update_plot(canvas, canvas_panel, fig, ax, plots_to_show)
-   
+    
     return result_dict
 
 
