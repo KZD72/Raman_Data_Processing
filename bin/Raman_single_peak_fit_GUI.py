@@ -480,9 +480,13 @@ def batch_fit(canvas, canvas_panel, info, x, y, peaks, file_path,models=[], sile
             leyend.append("P"+str(item+1)+"_"+peak_final_label[inner_iter])
             inner_iter = inner_iter+1
             # Get the integral:
-            # Define the function to be integrated
-            print(fitting.params['baseline'].value)
-            result=np.trapz(Raman_fit.model_f(fitting.params, x, peak_info, new_model)-fitting.params['baseline'].value)
+            def func(x):
+                        return Raman_fit.model_f(fitting.params, x, peak_info, new_model) - fitting.params['baseline'].value
+
+            # Compute the integral
+            result, error = spi.quad(func, x[0], x[-1])  # replace 'a' and 'b' with the limits of integration
+            print(f"baseline is {fitting.params['baseline'].value}")
+            #result=np.trapz(Raman_fit.model_f(fitting.params, x, peak_info, new_model)-fitting.params['baseline'].value)
             int_val.append(result)
             # Extract the FWHM of the voight profile:
     plots_to_show.append(np.array([x,[fitting.params['baseline'].value for item in x]], dtype='object'))
@@ -682,13 +686,14 @@ def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks, updat
                                   peak_final_label[inner_iter])
                     inner_iter = inner_iter+1
                     # Get the integral:
-                    # Define the function to be integrated
+                    # Define the function to integrate
+                    def func(x):
+                        return Raman_fit.model_f(fitting.params, x, peak_info, new_model) - fitting.params['baseline'].value
 
-                    # def f(x):
-                    #     return Raman_fit.model_f(fitting.params, x, peak_info, new_model)
-
-                    # result, error = spi.quad(f, x[0], x[-1])
-                    result=np.trapz(Raman_fit.model_f(fitting.params, x, peak_info, new_model)-fitting.params['baseline'].value)
+                    # Compute the integral
+                    result, error = spi.quad(func, x[0], x[-1])  # replace 'a' and 'b' with the limits of integration
+                    print(f"baseline is {fitting.params['baseline'].value}")
+                    #result=np.trapz(Raman_fit.model_f(fitting.params, x, peak_info, new_model)-fitting.params['baseline'].value)
                     int_val.append(result)
                     # Extract the FWHM of the voight profile:
             plots_to_show.append(np.array([x,[fitting.params['baseline'].value for item in x]], dtype='object'))
