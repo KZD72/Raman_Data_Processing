@@ -27,15 +27,11 @@ This creates a smple GUI for the single peak fitting panel dashboard
 import tkinter as tk
 import numpy as np
 import time
-import re
-from tkinter import ttk
-from tkinter import messagebox
-import os
-import scipy.integrate as spi
-import csv
 
+from tkinter import ttk, filedialog
+from tkinter import messagebox
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from bin import Raman_dataloader
-from bin import Raman_fit
 from bin import Raman_plot
 
 
@@ -74,264 +70,10 @@ def error(text):
     messagebox.showerror("Error", text)
 
 
-
-def dict_to_list(dictionary):
-    """
-    Converts the values of a dictionary to a NumPy array.
-
-    Args:
-        dictionary (dict): The input dictionary.
-
-    Returns:
-        numpy.ndarray: The NumPy array containing the dictionary values.
-    """
-    return np.array(list(dictionary.values()), dtype=object)
-
-
-def pad_dictionary(dictionary):
-    """
-    Fill missing keys in each dictionary entry with 'float("nan")' while maintaining alphabetical order.
-
-    Parameters:
-        dictionary (dict): Dictionary to be filled.
-
-    Returns:
-        filled_dict (dict): Dictionary with filled entries.
-
-    Example:
-        your_dict = {
-            'aa': {'a': 2},
-            'bb': {'a': 5, 'b': 6, 'c': 7},
-            'cc': {'a': 8, 'b': 6, 'd': 7},
-            'dd': {'a': 11, 'b': 12, 'c': 13},
-            'ee': {'a': 14, 'c': 15}
-        }
-
-        filled_dict = fill_missing_keys(your_dict)
-    """
-    keys = list(dictionary.keys())
-    all_keys = sorted(set().union(*[dictionary[key] for key in keys]))
-
-    filled_dict = {}
-    for key in keys:
-        entry = dictionary[key]
-        filled_entry = {**{k: float("nan") for k in all_keys}, **entry}
-        filled_dict[key] = filled_entry
-
-    return filled_dict
-
-
-def calculate_quotients(raw_dictionary, param):
-    """
-    Calculate the quotients of a specific parameter with each key as the denominator.
-
-    Parameters:
-        raw_dictionary (dict): Dictionary containing the data.
-        param (str): Parameter to calculate the quotients.
-
-    Returns:
-        quotients (ndarray): Matrix of quotients.
-        keys (list): List of keys from the dictionary.
-        params (list): List of parameters from the dictionary.
-
-    Example:
-        your_dict = {
-            'aa': {'a': 2, 'b': 3, 'c': 4},
-            'bb': {'a': 5, 'b': 6, 'c': 7},
-            'cc': {'a': 8, 'c': 10},
-            'dd': {'a': 11, 'b': 12, 'c': 13},
-            'ee': {'a': 14, 'b': 14, 'c': 15}
-        }
-
-        quotients, keys, params = calculate_quotients(your_dict, 'a')
-    """
-    dictionary = pad_dictionary(raw_dictionary)
-    keys = list(dictionary.keys())  # Get the keys from the dictionary
-
-    # Get the parameters from the first key
-    params = list(dictionary[keys[0]].keys())
-    # Create a 2D array of values from the dictionary
-    values = np.array([list(dictionary[key].values())
-                      for key in keys], dtype='float64')
-
-    # Find the index of the specified parameter
-    param_index = params.index(param)
-
-    # Initialize an array to store the quotients
-    quotients = np.zeros((len(keys), len(keys)), dtype=object)
-
-    # Calculate the quotients
-    for i in range(len(keys)):
-        if param in dictionary[keys[i]]:
-            if values[i, param_index] > 1e-12:
-                quotients[:, i] = values[:, param_index] / \
-                    values[i, param_index]
-            else:
-                quotients[:, i] = np.nan
-        else:
-            quotients[:, i] = np.nan
-
-    return quotients, keys, params
-
-
-def create_table(root, data, header):
-    """
-    Create a table in a Tkinter window.
-
-    Parameters:
-        root (tk.Tk): Root Tkinter window object.
-        data (list): 2D list of data to populate the table.
-        header (list): List of column headers.
-
-    Returns:
-        str: Formatted table as a string.
-
-    Example:
-        root = tk.Tk()
-        data = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
-        header = ['A', 'B', 'C']
-        table_text = create_table(root, data, header)
-        print(table_text)
-        root.mainloop()
-    """
-    # Get the number of rows and columns in the data
-    num_rows = len(data)
-    num_columns = len(data[0])
-
-    table_text = ''
-
-    # Create labels for column headers
-    for j in range(num_columns):
-        label = tk.Label(root, text=f"{header[j]}", relief=tk.RIDGE, width=12)
-        label.grid(row=0, column=j + 1)
-
-    # Create labels for row headers and data cells
-    for i in range(num_rows):
-        # Create label for row header
-        label = tk.Label(root, text=f"{header[i]}", relief=tk.RIDGE, width=8)
-        label.grid(row=i + 1, column=0)
-
-        # Create labels for data cells
-        for j in range(num_columns):
-            formatted_value = f"{data[i][j]:.3f}"
-            label = tk.Label(root, text=formatted_value,
-                             relief=tk.SOLID, width=12)
-            label.grid(row=i + 1, column=j + 1)
-
-            # Add the formatted value to the table text
-            table_text += formatted_value
-
-            # Add a comma separator if not the last column
-            if j < num_columns - 1:
-                table_text += ', '
-
-        # Add a new line after each row
-        table_text += '\n'
-
-    return table_text
-
-
-def create_plain_table(data, header):
-    """
-    Create a string representation of a table.
-
-    Parameters:
-        data (list): 2D list of data to populate the table.
-        header (list): List of column headers.
-
-    Returns:
-        str: Formatted table as a string.
-    """
-    # Get the number of rows and columns in the data
-    num_rows = len(data)
-    num_columns = len(data[0])
-
-    table_text = ''
-
-    # Add column headers to the table text
-    table_text += ', '.join(header) + '\n'
-
-    # Add data cells to the table text
-    for i in range(num_rows):
-        row_values = [f"{data[i][j]:.3f}" for j in range(num_columns)]
-        table_text += ', '.join(row_values) + '\n'
-
-    return table_text
-
-
-def expanded_dict(dictionary, entries, label):
-    """
-    Add new subentry to each entry in the dictionary.
-
-    Parameters:
-        dictionary (dict): Original dictionary.
-        entries (list): List of new entries to be added.
-        label (str): Label for the new subentry.
-
-    Returns:
-        dict: Updated dictionary with the new subentry.
-
-    Example:
-        dictionary = {
-            1: {'Gaussian_component': 0.65899564, 'Center': 1406.31829, 'FWHM': 69.6858762, 'Intensity': 7152.90713},
-            2: {'Gaussian_component': 0.36174242, 'Center': 437.299737, 'FWHM': 10.925679, 'Intensity': 6093.78661},
-            ...
-        }
-        entries = [100, 200, ...]
-        label = 'Integrated Intensity'
-        expanded_dict(dictionary, entries, label)
-    """
-    iterator = 0
-    for key, subentry in dictionary.items():
-        subentry[label] = entries[iterator]
-        iterator = iterator+1
-    return dictionary
-
-
-def voigt_fix_dic(dictionary):
-    """
-    Calculates and adds the 'FWHM' entry to the dictionary using the Voigt function approximation with ~0.02% accuracy.
-
-    The Voigt function approximation is based on John F. Kielkopf's approach (1973),
-    "New approximation to the Voigt function with applications to spectral-line profile analysis",
-    Journal of the Optical Society of America, 63 (8): 987, doi:10.1364/JOSA.63.000987
-
-    Parameters:
-        dictionary (dict): The input dictionary containing the subentries.
-
-    Returns:
-        dict: The dictionary with the 'FWHM' entry added to the subentries where 'Gauss_FWHM' and 'Lorentz_FWHM' exist.
-
-    Example:
-        input_dict = {
-            1: {'Gauss_FWHM': 368.614301, 'Lorentz_FWHM': 116.375262, 'Center': 1406.16995},
-            2: {'Gauss_FWHM': 10.9247146, 'Lorentz_FWHM': 20.346789, 'Center': 437.299772},
-            3: {'Gauss_FWHM': 25.7036236, 'Lorentz_FWHM': 50.987631, 'Center': 1251.33855}
-        }
-        output_dict = voigt_fix_dic(input_dict)
-        print(output_dict)
-    """
-
-    for subentry in dictionary.values():
-        if 'Gauss_FWHM' in subentry and 'Lorentz_FWHM' in subentry:
-            # Calculate the FWHM using the Voigt function approximation
-            fwhm = 0.5346 * subentry['Lorentz_FWHM'] + np.sqrt(
-                subentry['Gauss_FWHM'] * subentry['Gauss_FWHM'] + 0.2166 * subentry['Lorentz_FWHM'] * subentry['Lorentz_FWHM'])
-            # Insert the 'FWHM' subentry after 'Center'
-            subentry_keys = list(subentry.keys())
-            center_index = subentry_keys.index('Center')
-            subentry_keys.insert(center_index + 1, 'FWHM')
-            subentry_values = list(subentry.values())
-            subentry_values.insert(center_index + 1, fwhm)
-            subentry.clear()
-            subentry.update(zip(subentry_keys, subentry_values))
-
-    return dictionary
-
-
 def on_popup_close(popup):
     popup.grab_release()  # Release the grab
     popup.destroy()
+
 
 def create_dropdown(master, dictionary, row, column):
     # Get the labels from the dictionary
@@ -344,16 +86,247 @@ def create_dropdown(master, dictionary, row, column):
     var.set(labels[0])
 
     # Create the dropdown menu using a Combobox
-    dropdown = ttk.Combobox(master, textvariable=var, values=labels)
+    # Set a fixed width for the combobox
+    dropdown = ttk.Combobox(master, textvariable=var, values=labels, width=20)
     dropdown.grid(row=row, column=column, padx=10, pady=10, sticky='nsew')  # Place the dropdown at the specified row and column
     return var  # Return the variable so you can get the selected option later
+
+
+class FilteredListbox:
+    def __init__(self, master, dictionary, row, column):
+        self.master = master
+        self.row = row
+        self.column = column
+
+        # All of the items for the listbox.
+        self.items = list(dictionary.keys())
+
+        # The current filter. Setting it to None initially forces the first update.
+        self.curr_filter = None
+
+        # Create the filter label and entry box.
+        tk.Label(master, text='Filter Search:').grid(row=row, column=column)
+        self.filter_box = tk.Entry(master)
+        self.filter_box.grid(row=row+1, column=column)
+
+        # A listbox with scrollbars.
+        tk.Label(master, text='Select the file:').grid(row=row+2, column=column)
+
+        yscrollbar = tk.Scrollbar(master, orient='vertical')
+        yscrollbar.grid(row=row+3, column=column+1, sticky='ns')
+
+        xscrollbar = tk.Scrollbar(master, orient='horizontal')
+        xscrollbar.grid(row=row+4, column=column, sticky='we')
+
+        self.listbox = tk.Listbox(master)
+        self.listbox.grid(row=row+3, column=column, sticky='nswe')
+
+        yscrollbar.config(command=self.listbox.yview)
+        xscrollbar.config(command=self.listbox.xview)
+
+        # The initial update.
+        self.on_tick()
+
+    def on_tick(self):
+        if self.filter_box.get() != self.curr_filter:
+            # The contents of the filter box has changed.
+            self.curr_filter = self.filter_box.get()
+
+            # Refresh the listbox.
+            self.listbox.delete(0, 'end')
+
+            for item in self.items:
+                if self.curr_filter in item:
+                    self.listbox.insert('end', item)
+
+        self.master.after(200, self.on_tick)
+
+    def get(self):
+        return self.listbox.get(tk.ACTIVE)
+    
+    
+
+def extract_peaks(dictionary, window):
+    """
+    Extracts and groups peak data from a nested dictionary structure.
+    
+    The function first extracts 'Center' values from the 'fit_results' of each entry in the input dictionary.
+    It then groups these 'Center' values into groups based on a given window.
+    Each group is represented by the average of its values.
+    
+    Parameters:
+    dictionary (dict): The input dictionary containing the 'fit_results'.
+    window (int): The window size for grouping 'Center' values.
+    
+    Returns:
+    dict: A dictionary where each key is a group label and each value is the average of the 'Center' values in that group.
+    """
+    
+    new_dictionary = {}
+
+    for key, value in dictionary.items():
+        fit_results = value.get('fit_results', {})
+        center_values = {k: round(v.get('Center', 0)) for k, v in fit_results.items()}
+        new_dictionary[key] = center_values
+
+    grouped_dictionary = {}
+    group_counter = 1
+
+    for key, value_dict in new_dictionary.items():
+        for sub_key, center_value in value_dict.items():
+            if not any(abs(center_value - val) <= window for group in grouped_dictionary.values() for val in group):
+                grouped_dictionary[f'P{group_counter}'] = [center_value]
+                group_counter += 1
+            else:
+                for group_key, group_values in grouped_dictionary.items():
+                    if any(abs(center_value - val) <= window for val in group_values):
+                        grouped_dictionary[group_key].append(center_value)
+                        break
+
+    # Calculate the average of each group
+    averaged_dictionary = {key+"_"+f"{round(sum(values) / len(values))}": round(sum(values) / len(values)) for key, values in grouped_dictionary.items()}
+    #print(averaged_dictionary)
+    return averaged_dictionary
+
+def extract_keys(dictionary):
+    """
+    Extracts the keys of the nested dictionaries inside 'fit_results' from the first entry of the input dictionary.
+    
+    Parameters:
+    dictionary (dict): The input dictionary containing the 'fit_results'.
+    
+    Returns:
+    dict: A dictionary where each key is a key in the nested dictionaries inside 'fit_results' of the first entry in the input dictionary, and the value is the same as the key.
+    """
+    
+    # Get the first entry of the input dictionary
+    first_entry = next(iter(dictionary.values()))
+    
+    # Get the 'fit_results' dictionary of the first entry
+    fit_results = first_entry.get('fit_results', {})
+    
+    # Get the first nested dictionary inside 'fit_results'
+    first_nested_dict = next(iter(fit_results.values()), {})
+    
+    # Create a dictionary where the keys are the keys of the first nested dictionary and the values are the same as the keys
+    keys_dict = {key: key for key in first_nested_dict.keys() if key != 'Peak Model'}
+
+    return keys_dict
+
+def recover_values(dict1_value, dict2, window, key_to_recover):
+    """
+    Recovers values from dict2 based on a given value and a given window.
+    
+    Parameters:
+    dict1_value (float): The value to look for in the 'Center' values of dict2.
+    dict2 (dict): The dictionary containing the 'fit_results' to recover values from.
+    window (int): The window size for comparing 'Center' values.
+    key_to_recover (str): The key whose value should be recovered from the 'fit_results' dictionary.
+    
+    Returns:
+    dict: A dictionary where each key is a key from the 'fit_results' dictionary in dict2 that matches dict1_value within the given window, and each value is the value of key_to_recover.
+    """
+    
+    # Create a new dictionary to store the recovered values
+    recovered_values = {}
+
+    # Iterate over each key-value pair in dict2
+    for key, value in dict2.items():
+        # Iterate over each key-value pair in the 'fit_results' dictionary
+        # Flag to indicate if a peak has been found
+        peak_found = False
+        
+        for fit_key, fit_value in value['fit_results'].items():
+            # Check if the 'Center' value is within the window of dict1_value
+          
+            if abs(float(fit_value['Center']) - float(dict1_value)) <= window:
+                if not peak_found:
+                    # If a peak has not been found yet, add the value of key_to_recover to the recovered values
+                    recovered_values[key] = fit_value.get(key_to_recover)
+                    peak_found = True
+                    
+                else:
+                    # If a peak has already been found, issue a warning
+                    error(f"Warning: More than one peak detected in the window for key {key}.")
+                    recovered_values[key] = np.nan
+                    
+            
+            if not key in recovered_values: 
+                recovered_values[key] = np.nan
+                
+
+    return recovered_values, peak_found
+
+def create_range(range_type, start, end, n):
+    """
+    Creates a range of values based on the specified type, start value, step size, and number of steps.
+
+    Parameters:
+    range_type (str): The type of range to create. Options are 'Linear', 'Logarithmic (base 10)', 'Logarithmic (base e)', and 'Exponential'.
+    start (float): The start value of the range.
+    step (float): The step size between values in the range.
+    n (int): The number of steps to generate in the range.
+
+    Returns:
+    numpy.ndarray: A numpy array containing the generated range of values.
+    """
+    key=True
+   
+    if end<=start:
+        key=False
+    
+    if range_type == 'Linear':
+        try:
+    
+            values = np.linspace(start, end, num=n)
+        except:
+            key=False
+            values=np.array([])
+            error("Add a valid range")
+
+    elif range_type == 'Log (base 10)':
+        try:            
+            values = np.logspace(np.log10(start), np.log10(end), num=n, base=10)
+            #print("log 10 val")
+            #print(values)
+        except:
+            key=False
+            values=np.array([])
+            error("Add a valid range")
+        
+    return values, key
+
+def get_nan_indices(y_list):
+    """
+    Get the indices of NaN values in a list.
+
+    Parameters:
+    y_list (list): The list to check for NaN values.
+
+    Returns:
+    list: A list of indices where y_list is NaN.
+    """
+    # Convert the list to a numpy array
+    y_array = np.array(y_list)
+
+    # Get a boolean array that is True where y_array is NaN
+    is_nan = np.isnan(y_array)
+
+    # Get the indices where y_array is NaN
+    nan_indices = np.where(is_nan)[0]
+
+    return nan_indices.tolist()
 
 ###############################################################################
 def create_dashboard(main_window, canvas, canvas_panel, dictionary):
 
-    global selected_option
+    global selected_option, peaks,peaks_compare
+    global peak_1_sel,peak_2_sel,peak_params,peak_params_sel
+    global peak_1_sel_inner,peak_3_sel,window_width
+    global custom_list_type
+    global custom_list_type, start_entry, step_entry
     
-   
+    
 
     def on_closing():
         """
@@ -389,8 +362,14 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
                 text_widget.insert(
                     "end", f"Peak {peak_number}:" + "\n", "bold")
                 for parameter, value in parameters.items():
-                    text_widget.insert(
-                        "end", f"{parameter}: {value}" + "\n", "bold")
+                    try:
+                        # Try to convert str_value to a float and format it in scientific notation
+                        num_value = float(value)
+                        text_widget.insert("end", f"{parameter}: {num_value:.6e}\n\n", "bold")
+                    except ValueError:
+                        # If str_value cannot be converted to a float, insert it as is
+                        text_widget.insert("end", f"{parameter}: {value}\n\n", "bold")
+                
                 text_widget.insert("end", "\n", "bold")
         button_full_fit_info.config(state="normal")
         
@@ -437,52 +416,314 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
             save_button.grid(row=1, column=0, sticky='nsew')
 
             popup_window.mainloop()
+    
+    def update_window():
+        global peaks,peaks_compare, peak_params, peak_1_sel,peak_2_sel,peak_params_sel
+        try:
+            if float(window_width.get())>=1 and float(window_width.get())<100:
+                peaks=extract_peaks(dictionary,float(window_width.get()))        
+                peaks_compare={"None": 1}
+                peaks_compare.update(peaks)
+                peak_1_sel = create_dropdown(box_frame3, peaks,1,0)
+                peak_params_sel = create_dropdown(box_frame3, peak_params,1,1)    
+                peak_2_sel = create_dropdown(box_frame3, peaks_compare,1,2)
 
+            else:
+                error("Field must be a valid number [1,100]")
+        except:
+            error("Field must be a valid number [1,100]")
+
+    def show_inner_plot():
+        global peaks,peaks_compare,peak_1_sel,peak_2_sel,peak_params,peak_params_sel
+        global peak_1_sel_inner,peak_3_sel,peak_2_sel
+
+        def update_inner_plot():
+            if isinstance(x_label_entry.get(), str) and isinstance(y_label_entry.get(), str) and isinstance(title_entry.get(), str) :      
+            
+                fig, ax = Raman_plot.plotter(plots_to_show,
+                                                [x_label_entry.get(),
+                                                y_label_entry.get()],
+                                                title_entry.get(),                                            
+                                                lines=False,
+                                                res=150,
+                                                size="",
+                                                leyends=peak_params_sel.get(),
+                                                leyend_frame=[True, 'b']
+                                                )
+                Raman_plot.update_plot(new_canvas, new_canvas_panel, fig, ax, plots_to_show)
+            else:
+                error("Labels must be strings")
+        
+        
+        inner_x, flag2=recover_values(peaks[peak_3_sel.get()], dictionary, float(window_width.get()), peak_1_sel_inner.get())
+        inner_y, flag=recover_values(peaks[peak_1_sel.get()], dictionary, float(window_width.get()), peak_params_sel.get())
+      
+        if peak_2_sel.get()=="None":
+            inner_y_norm={key: 1 for key in inner_y.keys()}
+        else:
+            inner_y_norm,flag3=recover_values(peaks[peak_2_sel.get()], dictionary, float(window_width.get()), peak_params_sel.get())
+          
+        
+        inner_x_list=list(inner_x.values())
+        nan_indices_x = get_nan_indices(inner_x_list)
+        inner_y_list=list(inner_y.values())
+        nan_indices_y = get_nan_indices(inner_y_list)
+        inner_y_norm_list=list(inner_y_norm.values())
+        nan_indices_y_norm = get_nan_indices(inner_y_norm_list)
+       
+        
+        filtered_y_list = [inner_y_list[i]/inner_y_norm_list[i]
+                            for i in range(len(inner_y_list))
+                              if i not in nan_indices_y
+                                and i not in nan_indices_x
+                                  and i not in nan_indices_y_norm]
+        filtered_x_list = [inner_x_list[i] 
+                           for i in range(len(inner_x_list))
+                               if i not in nan_indices_y
+                                and i not in nan_indices_x
+                                  and i not in nan_indices_y_norm]
+
+        plots_to_show=[[filtered_x_list,filtered_y_list]]
+
+        fig, ax = Raman_plot.plotter(plots_to_show,
+                                            [peak_params_sel.get(),
+                                             peak_1_sel_inner.get()],
+                                            peak_params_sel.get(),                                            
+                                            lines=False,
+                                            res=150,
+                                            leyends=peak_params_sel.get(),
+                                            leyend_frame=[True, 'b']
+                                            )
+        # Create a new Toplevel window
+        window = tk.Toplevel(main_window)
+        window.title('Dahsboard graph')
+                
+        window.resizable(False, False)  # Disable resizing
+
+        # Create a new canvas and add it to the new window
+        new_canvas_panel = ttk.Frame(window)
+        new_canvas_panel.grid(row=0, column=0, sticky="nsew")
+        new_canvas_panel.rowconfigure(0, weight=1)
+        new_canvas_panel.columnconfigure(0, weight=1)
+
+        
+        # Area for the figure:
+        # Create the initial graph
+        new_canvas = FigureCanvasTkAgg(fig, master=new_canvas_panel)
+        new_canvas.draw()
+        new_canvas.get_tk_widget().grid(row=0, column=0, sticky="nsew")
+        
+        # Update the plot on the new canvas
+        Raman_plot.update_plot(new_canvas, new_canvas_panel, fig, ax, plots_to_show)
+
+            ## Area to introduce the custom inputs:
+        # Create a panel on the right side of the canvas
+        panel = ttk.Frame(window)
+        panel.grid(row=0, column=1, sticky="nsew")
+
+        # Create three entry fields in the panel
+        title_entry = ttk.Entry(panel)
+        title_entry.insert(0, "Enter title (LaTex allowed)")
+        title_entry.grid(row=0, column=0, sticky="nsew")
+
+        x_label_entry = ttk.Entry(panel)
+        x_label_entry.insert(0, "Enter x-axis label (LaTex allowed)")
+        x_label_entry.grid(row=1, column=0, sticky="nsew")
+
+        y_label_entry = ttk.Entry(panel)
+        y_label_entry.insert(0, "Enter y-axis label (LaTex allowed)")
+        y_label_entry.grid(row=2, column=0, sticky="nsew")
+
+        update_plot = tk.Button(panel, text="Update", command=update_inner_plot)
+        update_plot.grid(row=3,column=0,sticky='ne')
+    
+    def show_outer_plot(option=1):
+     
+        global custom_list_type, start_entry, step_entry
+        global peaks,peak_1_sel,window_width,peak_params_sel,peak_2_sel
+
+        def update_inner_plot():
+                if isinstance(x_label_entry.get(), str) and isinstance(y_label_entry.get(), str) and isinstance(title_entry.get(), str) :     
+                    
+                    try:
+                
+                        fig, ax = Raman_plot.plotter(plots_to_show,
+                                                        [r'$' + x_label_entry.get() + '$',
+                                                        r'$' + y_label_entry.get() + '$'],
+                                                        r'$' +title_entry.get()+ '$',                                            
+                                                        lines=False,
+                                                        res=150,
+                                                        size="",
+                                                        leyends=peak_params_sel.get(),
+                                                        leyend_frame=[True, 'b']
+                                                        )
+                        Raman_plot.update_plot(new_canvas, new_canvas_panel, fig, ax, plots_to_show)
+                    except:
+                        error("Error in LaTex format")    
+                else:
+                    error("Labels must be strings")
+
+        key=False
+        inner_y, flag=recover_values(peaks[peak_1_sel.get()], dictionary, float(window_width.get()), peak_params_sel.get())
+        if option==1:
+            x_list,key=create_range(custom_list_type.get(), float(start_entry.get()), float(step_entry.get()), len(inner_y))
+        else:
+            filepath = filedialog.askopenfilename(filetypes=[("CSV Files", "*.csv"), (
+            "TXT Files", "*.txt")])
+            if filepath != '':
+                data = np.genfromtxt(filepath, dtype=float, delimiter=' ')
+                #print(data.shape)
+            if data.ndim == 1 and len(data) == len(inner_y) and not np.any(np.isnan(data)):
+                key=True
+                x_list=data
+            else:
+                error("Imported file with wrong dimensions or non numerical entries")
+    
+       
+        if key:
+            
+            if peak_2_sel.get()=="None":
+                inner_y_norm={key: 1 for key in inner_y.keys()}
+            else:
+                inner_y_norm,flag3=recover_values(peaks[peak_2_sel.get()], dictionary, float(window_width.get()), peak_params_sel.get())
+            
+            
+            inner_y_list=list(inner_y.values())
+            nan_indices_y = get_nan_indices(inner_y_list)
+            inner_y_norm_list=list(inner_y_norm.values())
+            nan_indices_y_norm = get_nan_indices(inner_y_norm_list)
+        
+            
+        
+            
+            filtered_y_list = [inner_y_list[i]/inner_y_norm_list[i]
+                                for i in range(len(inner_y_list))
+                                if i not in nan_indices_y                               
+                                    and i not in nan_indices_y_norm]
+            
+            filtered_x_list = [x_list[i]
+                                for i in range(len(x_list))
+                                if i not in nan_indices_y                               
+                                    and i not in nan_indices_y_norm]
+            
+
+            plots_to_show=[[filtered_x_list,filtered_y_list]]
+
+            fig, ax = Raman_plot.plotter(plots_to_show,
+                                                [peak_params_sel.get(),
+                                                peak_1_sel_inner.get()],
+                                                peak_params_sel.get(),                                            
+                                                lines=False,
+                                                res=150,
+                                                size="",
+                                                leyends=peak_params_sel.get(),
+                                                leyend_frame=[True, 'b']
+                                                )
+            
+             # Create a new Toplevel window
+            window = tk.Toplevel(main_window)
+            window.title('Dahsboard graph')
+                 
+            window.resizable(False, False)  # Disable resizing
+
+            # Create a new canvas and add it to the new window
+            new_canvas_panel = ttk.Frame(window)
+            new_canvas_panel.grid(row=0, column=0, sticky="nsew")
+            new_canvas_panel.rowconfigure(0, weight=1)
+            new_canvas_panel.columnconfigure(0, weight=1)
+
+           
+            # Area for the figure:
+            # Create the initial graph
+            new_canvas = FigureCanvasTkAgg(fig, master=new_canvas_panel)
+            new_canvas.draw()
+            new_canvas.get_tk_widget().grid(row=0, column=0, sticky="nsew")
+           
+            # Update the plot on the new canvas
+            Raman_plot.update_plot(new_canvas, new_canvas_panel, fig, ax, plots_to_show)
+
+             ## Area to introduce the custom inputs:
+            # Create a panel on the right side of the canvas
+            panel = ttk.Frame(window)
+            panel.grid(row=0, column=1, sticky="nsew")
+
+            # Create three entry fields in the panel
+            title_entry = ttk.Entry(panel)
+            title_entry.insert(0, "Enter title")
+            title_entry.grid(row=0, column=0, sticky="nsew")
+
+            x_label_entry = ttk.Entry(panel)
+            x_label_entry.insert(0, "Enter x-axis label")
+            x_label_entry.grid(row=1, column=0, sticky="nsew")
+
+            y_label_entry = ttk.Entry(panel)
+            y_label_entry.insert(0, "Enter y-axis label")
+            y_label_entry.grid(row=2, column=0, sticky="nsew")
+
+            update_plot = tk.Button(panel, text="Update", command=update_inner_plot)
+            update_plot.grid(row=3,column=0,sticky='ne')
+            
+     
+    def show_outer_plot_1():
+        show_outer_plot(option=1)      
+
+    def show_outer_plot_2():
+        show_outer_plot(option=2)
+
+
+    ###############################################################
+    ###############################################################
+    ### Graphic crreation                                       ###
+    ###############################################################
+    ###############################################################       
     # Creation of main panel elements
     main_panel = tk.Frame(main_window, bg='white')
-    main_panel.grid(row=0, column=0, padx=10, pady=10, sticky='nsew')
-
-    # Grid layout configuration
-    main_panel.grid_columnconfigure(0, weight=1)
-    main_panel.grid_rowconfigure(0, weight=1)
-
-    # Create subpanel frames within the main panel
-    subpanel1 = tk.Frame(main_panel, bg='lightblue')
-    subpanel2 = tk.Frame(main_panel, bg='lightgrey')
-
+    main_panel.grid(row=0, column=0, padx=1, pady=1, sticky='nsew')
+    
     # Grid layout configuration
     main_panel.grid_columnconfigure(0, weight=1)
     main_panel.grid_rowconfigure(0, weight=1)
     main_panel.grid_rowconfigure(1, weight=1)
+
+
+    # Create subpanel frames within the main panel
+    subpanel1 = tk.Frame(main_panel, bg='lightblue')
+    subpanel2 = tk.Frame(main_panel, bg='lightgrey')   
 
     # Grid placement of subpanel frames
     subpanel1.grid(row=0, column=0, padx=10, pady=10, sticky='nsew')
     # Subpanel 1
     subpanel1.grid_rowconfigure(0, weight=1)  # Configure row weight
     subpanel1.grid_columnconfigure(0, weight=1)  # Configure column weight
+    #subpanel1.grid_columnconfigure(1, weight=1)  # Configure column weight
 
     subpanel2.grid(row=1, column=0, padx=10, pady=10, sticky='nsew')
     # Subpanel 2
     subpanel2.grid_rowconfigure(0, weight=1)  # Configure row weight
     subpanel2.grid_columnconfigure(0, weight=1)  # Configure column weight
-
+    
+    ###############################################################
+    ### Subpanel 1                                              ###
+    ###############################################################
     # Create the decoration of the subpanels
     # Create a style for the labels
     style = ttk.Style()
     style.configure("Box.TLabel", background=main_window["background"])
-
-    box_frame = ttk.Frame(subpanel1, borderwidth=1, relief="groove")
+    
+    box_frame = ttk.Frame(subpanel1, borderwidth=1)
     box_frame.grid(row=1, column=0, padx=10, pady=10, sticky='nsew')
     # Configure box_frame to expand in both directions
     box_frame.grid_rowconfigure(0, weight=1)
     box_frame.grid_columnconfigure(0, weight=1)
+    box_frame.grid_columnconfigure(1, weight=1)
 
     # Create a new frame as a container for frame1 and the scrollbar
-    container_frame = ttk.Frame(box_frame, borderwidth=1, relief="groove")
+    container_frame = ttk.Frame(box_frame, borderwidth=1)
     container_frame.grid(row=0, column=0, padx=10, pady=10, sticky='nsew')
 
     # Configure container_frame to expand in both directions
     container_frame.grid_rowconfigure(0, weight=1)
+    container_frame.grid_rowconfigure(1, weight=1)
     container_frame.grid_columnconfigure(0, weight=1)
 
     # Create a canvas widget inside the container frame
@@ -514,13 +755,13 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
     frame1.grid_columnconfigure(0, weight=1)
 
     canvas_1.create_window(
-        (0, 0), window=frame1, anchor="nw", tags="frame1")
+        (0, 0), window=frame1, anchor="nw", tags="frame1",width=450)
     #Add text widge to show fit info:
-    text_widget = tk.Text(frame1, padx=10, pady=10)
+    text_widget = tk.Text(frame1, padx=2, pady=2, wrap="none")
     text_widget.tag_configure("bold", font=("TkDefaultFont", 11, "bold"))
     text_widget.tag_configure("red", foreground="blue")
     text_widget.insert("end", "Fitting Info:\n", "bold")
-    text_widget.grid(row=0, column=0, padx=10, pady=10, sticky='nsew')
+    text_widget.grid(row=0, column=0, padx=2, pady=2, sticky='nsew')
 
     button_full_fit_info= tk.Button(container_frame, text='Show full fit info', command= fit_info_clicked, state="disabled")
     button_full_fit_info.grid(row=1, column=0, padx=10, pady=10,sticky='w')
@@ -528,16 +769,136 @@ def create_dashboard(main_window, canvas, canvas_panel, dictionary):
 
     # Second child frame
  
-
     frame2 = ttk.Frame(box_frame, borderwidth=2, relief="groove")    
-    frame2.grid(row=0, column=1, padx=10, pady=10, sticky='nsew')
-    # label dropdown 
-    label_drop = ttk.Label(frame2, text="Select the file:")
-    label_drop.grid(row=0, column=0, padx=5, pady=5)
+    frame2.grid(row=0, column=1, padx=10, pady=10, sticky='nsew')   
+    frame2.grid_columnconfigure(0, weight=1)
     # dropdown to select the file:
-    selected_option = create_dropdown(frame2, dictionary,1,0)
-
+    selected_option = FilteredListbox(frame2, dictionary, 0,0)
     button_fit = tk.Button(frame2, text='Show fit', command=fit_display)
-    button_fit.grid(row=2, column=0, padx=10, pady=10)
+    button_fit.grid(row=5, column=0, padx=10, pady=10)
+    ###############################################################
+    ### Subpanel 2                                              ###
+    ###############################################################
 
+    box_frame2_m = ttk.Frame(subpanel2, borderwidth=1, relief="groove")
+    box_frame2_m.grid(row=0, column=0, padx=10, pady=10, sticky='nsew')
+    tk.Label(box_frame2_m, text="Select the magnitude for the y axis:").grid(row=0)
+    box_frame4_m = ttk.Frame(subpanel2, borderwidth=1, relief="groove")
+    box_frame4_m.grid(row=1, column=0, padx=10, pady=10, sticky='nsew')
+    box_frame4_m.grid_rowconfigure(0, weight=1)
+    box_frame4_m.grid_rowconfigure(1, weight=1)
+    box_frame4_m.grid_columnconfigure(0, weight=1)
+    box_frame4_m.grid_columnconfigure(1, weight=1)
+    tk.Label(box_frame4_m, text="Select the magnitude for the x axis:").grid(row=0,column=0)
+       
+    box_frame2 = ttk.Frame(box_frame2_m, borderwidth=1, relief="groove")
+    box_frame2.grid(row=1, column=0, padx=10, pady=10, sticky='nsew')
+    # Configure box_frame to expand in both directions
+    box_frame2.grid_rowconfigure(0, weight=1)
+    box_frame2.grid_columnconfigure(0, weight=1)
+
+    box_frame3 = ttk.Frame(box_frame2_m, borderwidth=1, relief="groove")
+    box_frame3.grid(row=1, column=1, padx=10, pady=10, sticky='nsew')
+    # Configure box_frame to expand in both directions
+    box_frame3.grid_rowconfigure(0, weight=1)
+    box_frame3.grid_columnconfigure(0, weight=1)
+
+      
+    box_frame4 = ttk.Frame(box_frame4_m, borderwidth=1, relief="groove")
+    box_frame4.grid(row=1, column=1, padx=10, pady=10, sticky='nsew')
+    # Configure box_frame to expand in both directions
+    box_frame4.grid_rowconfigure(0, weight=1)
+    box_frame4.grid_columnconfigure(0, weight=1)
+  
+
+
+
+    ### Box frame
+    tk.Label(box_frame2, text="Spectral peak window").grid(row=0)
+    window_width = tk.Entry(box_frame2)
+    window_width.insert(0, "5.0")
+    window_width.grid(row=1, column=0)
+
+    peaks=extract_peaks(dictionary,float(window_width.get()))
+    peaks_compare={"None": 1}
+    peaks_compare.update(peaks)
+
+    peak_params=extract_keys(dictionary)
+
+    window_update = tk.Button(box_frame2, text='Update', command=update_window)
+    window_update.grid(row=1, column=1, padx=10, pady=10)
+
+     ### Box frame2
+    tk.Label(box_frame3, text="Peak:").grid(row=0,column=0)
+    peak_1_sel = create_dropdown(box_frame3, peaks,1,0)
+    tk.Label(box_frame3, text="Parameter:").grid(row=0,column=1)
+    peak_params_sel = create_dropdown(box_frame3, peak_params,1,1)    
+    tk.Label(box_frame3, text="Normalise by:").grid(row=0,column=2)
+    peak_2_sel = create_dropdown(box_frame3, peaks_compare,1,2)
+
+    ### Box frame3
+    postpro_tab = ttk.Notebook(box_frame4)
+    postpro_tab.grid(row=0, column=0, padx=10, pady=2, sticky='nsew')
+    tab1 = ttk.Frame(postpro_tab)
+    tab2 = ttk.Frame(postpro_tab)
+    postpro_tab.add(tab1, text="External data")
+    postpro_tab.add(tab2,text="Inner data")
+    #postpro_tab.bind("<<NotebookTabChanged>>", clean_external)
+    tab1.grid_columnconfigure(0, weight=1)
+    tab1.grid_columnconfigure(1, weight=1)
+    tab2.grid_columnconfigure(0, weight=1)
+    tab2.grid_columnconfigure(1, weight=1)
+
+    ## Tab_1
+    tk.Label(tab1, text="Select type of data for x values:").grid(row=0,column=0)
+    ### SubTab1    
+    subtab1_notebook=ttk.Notebook(tab1)
+    subtab1_notebook.grid(row=1,column=0)
+    subtab1 = ttk.Frame(subtab1_notebook)
+    subtab1_notebook.add(subtab1, text='Predefined x')
+    box_frame_subtab1 = ttk.Frame(subtab1, borderwidth=1, relief="groove")
+    box_frame_subtab1 .grid(row=0, column=0, padx=1, pady=1, sticky='nsew')
+    box_frame_subtab2 = ttk.Frame(subtab1, borderwidth=1, relief="groove")
+    box_frame_subtab2 .grid(row=0, column=1, padx=1, pady=1, sticky='nsew')
+    custom_list_type= tk.StringVar(value='Linear')
+    item_custom_list=0
+    for text in ['Linear', 'Log (base 10)']:
+        custom_list_type_var = tk.Radiobutton(box_frame_subtab1, text=text, variable=custom_list_type, value=text)
+        custom_list_type_var.grid(row=item_custom_list,column=0,sticky='nw')
+        item_custom_list+=1
+
+    start_label = tk.Label(box_frame_subtab2, text="Start:")
+    start_label.grid(row=0,column=0,sticky='nw')
+    start_entry = tk.Entry(box_frame_subtab2)
+    start_entry.grid(row=1,column=0,sticky='ne')
+    start_entry.insert(0, '1')  # Set default start value to 1
+
+    step_label = tk.Label(box_frame_subtab2, text="End:")
+    step_label.grid(row=2,column=0,sticky='nw')
+    step_entry = tk.Entry(box_frame_subtab2)
+    step_entry.grid(row=3,column=0,sticky='ne')
+    step_entry.insert(0, '10')  # Set default start value to 1
+
+    outer_dat_button_1 = tk.Button(box_frame_subtab2, text="Create range plot", command=show_outer_plot_1)
+    outer_dat_button_1.grid(row=4,column=0,sticky='ne')
+
+    ### SubTab2
+    subtab2 = ttk.Frame(subtab1_notebook)
+    subtab1_notebook.add(subtab2, text='Upload data for x')
+    outer_dat_button_2 = tk.Button(subtab2, text="Load data and plot", command=show_outer_plot_2)
+    outer_dat_button_2.grid(row=0,column=1,sticky='e')
+
+     ## Tab_2
+    tk.Label(tab2, text="Inner Parameter:").grid(row=0,column=0)
+    peak_3_sel = create_dropdown(tab2, peaks,1,0)
+    tk.Label(tab2, text="Parameter:").grid(row=0,column=1)
+    peak_1_sel_inner= create_dropdown(tab2, peak_params,1,1)    
+    plot_inner = tk.Button(tab2, text='Update', command=show_inner_plot)
+    plot_inner.grid(row=2, column=1, padx=10, pady=10)
    
+
+
+
+
+
+ 

@@ -32,7 +32,6 @@ from tkinter import ttk
 from tkinter import messagebox
 import os
 import scipy.integrate as spi
-import csv
 
 from bin import Raman_dataloader
 from bin import Raman_fit
@@ -314,8 +313,28 @@ def expanded_dict(dictionary, entries, label):
         iterator = iterator+1
     return dictionary
 
+def insert_entry(dictionary, key, value, position):
+    """
+    Inserts a new entry into a dictionary at a specific position.
 
-def voigt_fix_dic(dictionary):
+    Parameters:
+    dictionary (dict): The dictionary to insert the entry into.
+    key (str): The key of the new entry.
+    value (any): The value of the new entry.
+    position (int): The position to insert the new entry at.
+    """
+    keys = list(dictionary.keys())
+    values = list(dictionary.values())
+
+    keys.insert(position, key)
+    values.insert(position, value)
+
+    dictionary.clear()
+    dictionary.update(zip(keys, values))
+    #Fucking mutability... we do a return for clarity
+    return dictionary
+
+def voigt_fix_dic(dictionary,models):
     """
     Calculates and adds the 'FWHM' entry to the dictionary using the Voigt function approximation with ~0.02% accuracy.
 
@@ -339,19 +358,32 @@ def voigt_fix_dic(dictionary):
         print(output_dict)
     """
 
-    for subentry in dictionary.values():
-        if 'Gauss_FWHM' in subentry and 'Lorentz_FWHM' in subentry:
+    for iter,subentry in enumerate(dictionary.values()):
+        
+        if 'Gauss_FWHM' in subentry and 'Lorentz_FWHM' in subentry:           
             # Calculate the FWHM using the Voigt function approximation
             fwhm = 0.5346 * subentry['Lorentz_FWHM'] + np.sqrt(
                 subentry['Gauss_FWHM'] * subentry['Gauss_FWHM'] + 0.2166 * subentry['Lorentz_FWHM'] * subentry['Lorentz_FWHM'])
-            # Insert the 'FWHM' subentry after 'Center'
+            # Insert the 'FWHM' subentry after 'Center'            
             subentry_keys = list(subentry.keys())
             center_index = subentry_keys.index('Center')
-            subentry_keys.insert(center_index + 1, 'FWHM')
-            subentry_values = list(subentry.values())
-            subentry_values.insert(center_index + 1, fwhm)
-            subentry.clear()
-            subentry.update(zip(subentry_keys, subentry_values))
+            subentry=insert_entry(subentry, 'FWHM', fwhm, center_index + 1)
+        if models[iter]=="Asy-Sigmoidal-G-L":
+             #Correction of the FWHM from both functions in bimodal
+            fwhm=subentry['FWHM']*(1+0.40*subentry['Asymmetry']**2+1.35*subentry['Asymmetry']**4)
+            subentry_keys = list(subentry.keys())
+            center_index = subentry_keys.index('FWHM')
+            subentry=insert_entry(subentry, 'Asymmetric_FWHM', fwhm, center_index + 1)
+        else:
+            if 'Asymmetry' in subentry:
+                #Correction of the FWHM from both functions in bimodal
+                fwhm=subentry['FWHM']/2+subentry['Asymmetry']*subentry['FWHM']/2
+                subentry_keys = list(subentry.keys())
+                center_index = subentry_keys.index('FWHM')
+                subentry=insert_entry(subentry, 'Asymmetric_FWHM', fwhm, center_index + 1)
+        #Add the model to dictionary:
+        model=models[iter]
+        subentry=insert_entry(subentry, 'Peak Model', model, 0)
 
     return dictionary
 
@@ -392,14 +424,15 @@ def extract_peak_info(text):
     return peak_info
 
 
-def batch_fit(canvas, canvas_panel, info, x, y, peaks, file_path, silent=False):
+def batch_fit(canvas, canvas_panel, info, x, y, peaks, file_path,models=[], silent=False):
     # Extract peak positions and models from UI elements
     np_peaks = np.asarray(peaks, dtype='float64')
     peak_positions = [np_peaks[i, 0] for i in range(len(np_peaks))]
 
     # Only Gauss-Lorentz for now
-    models = ['Gauss-Lorentz' for item in peak_positions]
-
+    if len(models)!=len(peak_positions):
+        models = ['Voigt' for item in peak_positions]
+  
     # Find the index corresponding to each peak position
     index = [np.searchsorted(np.asarray(x, dtype='float64'), peak)
              for peak in peak_positions]
@@ -413,12 +446,12 @@ def batch_fit(canvas, canvas_panel, info, x, y, peaks, file_path, silent=False):
 
     # Launch the fitting process
     # Clear previous fit information
-
+  
     fitting = Raman_fit.fit(x, y, peak_info, models)
 
     # Get fit info
     info_fit = Raman_fit.fit_info(fitting)
-
+    
     # Get fit data
     y_fit = Raman_fit.model_f(fitting.params, x, peak_info, models)
 
@@ -434,7 +467,7 @@ def batch_fit(canvas, canvas_panel, info, x, y, peaks, file_path, silent=False):
 
     peak_final_label = [
         f'{params["Center"]:.1f}'for params in formated_info.values()]
-
+    
     int_val = []
     inner_iter = 0
     for item in range(len(models)):
@@ -447,23 +480,32 @@ def batch_fit(canvas, canvas_panel, info, x, y, peaks, file_path, silent=False):
             leyend.append("P"+str(item+1)+"_"+peak_final_label[inner_iter])
             inner_iter = inner_iter+1
             # Get the integral:
-            # Define the function to be integrated
+            def func(x):
+                        return Raman_fit.model_f(fitting.params, x, peak_info, new_model) - fitting.params['baseline'].value
 
-            def f(x):
-                return Raman_fit.model_f(fitting.params, x, peak_info, new_model)
-            result, error = spi.quad(f, x[0], x[-1])
+            # Compute the integral
+            result, error = spi.quad(func, x[0], x[-1])  # replace 'a' and 'b' with the limits of integration
+            print(f"baseline is {fitting.params['baseline'].value}")
+            #result=np.trapz(Raman_fit.model_f(fitting.params, x, peak_info, new_model)-fitting.params['baseline'].value)
             int_val.append(result)
             # Extract the FWHM of the voight profile:
-
+    plots_to_show.append(np.array([x,[fitting.params['baseline'].value for item in x]], dtype='object'))
+    leyend.append("Baseline")
     # add the integrated intesity to dictionary:
 
     formated_info = expanded_dict(
         formated_info, int_val, 'Integrated Intensity')
+    
+    r_2 = 1-(fitting.residual**2).sum() / \
+        (sum(np.power(y-np.mean(y), 2)))
+    formated_info = expanded_dict(
+                formated_info, [r_2 for item in int_val], 'Pearson_coeff')
+   
     # Add the FWHM if I have a voigt profile:
-    formated_info = voigt_fix_dic(formated_info)
+    formated_info = voigt_fix_dic(formated_info,models)
     # print(formated_info)
     # Update plot
-
+    
     result_dict = {info['Title']: {'title':info['Title'],
                                    'leyends': leyend,
                                    'plots_to_show': plots_to_show, 
@@ -471,7 +513,6 @@ def batch_fit(canvas, canvas_panel, info, x, y, peaks, file_path, silent=False):
                                    'post_process_results':formated_info,
                                    'full_fit_info':info_fit}}
     
-
    
     if silent:        
         print("Updated graph")
@@ -485,110 +526,13 @@ def batch_fit(canvas, canvas_panel, info, x, y, peaks, file_path, silent=False):
                                 leyend_frame=[True, 'b']
                                 )
         Raman_plot.update_plot(canvas, canvas_panel, fig, ax, plots_to_show)
-    # #####
-    # # Saving graphs and data
-    # #####
-    # # Save the figure
-    # try:
-
-    #     directory = os.path.dirname(file_path)
-    #     Name_to_save = os.path.join(
-    #         directory, info['Title']+"_Fit_Results"+".png")
-    #     fig.savefig(Name_to_save)
-    # except Exception as e:
-    #     print("Error:", e)
-
-    # # Save the dinal data
-    # try:
-    #     rows = []
-    #     iter = 0
-    #     for entry in plots_to_show:
-
-    #         if iter == 0:
-    #             rows.append(entry[0])
-    #             rows.append(entry[1])
-    #             iter = iter+1
-    #         else:
-    #             rows.append(entry[1])
-    #             iter = iter+1
-
-    #     headers = []
-    #     if len(plots_to_show) < 2:
-    #         headers.append('Wavenumber (1/cm)')
-    #         headers.append('Raman intensity (1/cm)')
-    #     elif len(plots_to_show) < 3:
-    #         headers.append('Wavenumber (1/cm)')
-    #         headers.append('Raman intensity (1/cm)')
-    #         headers.append('Model Raman intensity (1/cm)')
-    #     else:
-    #         headers.append('Wavenumber (1/cm)')
-    #         headers.append('Raman intensity (1/cm)')
-    #         headers.append('Model Raman intensity (1/cm)')
-    #         [headers.append(f"P_{iterator+1} intesity (1/cm)")
-    #          for iterator in range(len(plots_to_show)-2)]
-    #     directory = os.path.dirname(file_path)
-    #     Name_to_save = os.path.join(
-    #         directory, info['Title']+"_Fit_datasets"+".csv")
-    #     if os.path.isfile(Name_to_save):
-    #         # If the file exists, remove it
-    #         os.remove(Name_to_save)
-    #     if Name_to_save is not None:
-    #         with open(Name_to_save, "w", newline='') as csvfile:
-    #             writer = csv.writer(csvfile)
-    #             writer.writerow(headers)  # Write the headers as the first row
-    #             writer.writerows(np.transpose(rows))  # Write the rows of data
-    # except Exception as e:
-    #     print("Error:", e)
-
-    # # Save the postProdata
-    # try:
-
-    #     directory = os.path.dirname(file_path)
-    #     Name_to_save = os.path.join(
-    #         directory, info['Title']+"_Fit_Results"+".txt")
-    #     if os.path.isfile(Name_to_save):
-    #         # If the file exists, remove it
-    #         os.remove(Name_to_save)
-    #     # Write the dictionary to a file
-    #     with open(Name_to_save, 'w') as f:
-    #         for key, value in formated_info.items():
-    #             f.write(f'{key}: {value}\n')
-    #     # Append the fit report to the file
-    #     with open(Name_to_save, 'a') as f:
-    #         f.write('\nFit Report:\n')
-    #         f.write(info_fit)
-
-    #     iterator = 0
-    #     keys = list(formated_info.keys())
-    #     # Get the parameters from the first key
-    #     param_names = list(formated_info[keys[0]].keys())
-    #     table_to_save = []
-    #     table_to_save.append(
-    #         "\n\nPostprocesed ratios between peak parameters:")
-    #     for parameter in param_names:
-    #         # print(parameter)
-    #         table_to_save.append(parameter+":\n")
-    #         labels = ["P"+str(item+1)
-    #                   for item in range(len(formated_info.items()))]
-
-    #         # print(labels)
-    #         table_to_save.append(create_plain_table(
-    #             calculate_quotients(formated_info, parameter)[iterator], labels))
-    #         table_to_save = list(dict.fromkeys(table_to_save))
-    #         table_to_save.append("\n\n")
-    #     with open(Name_to_save, 'a') as f:
-    #         # Write the table string to the file
-    #         table_to_save_string = '\n'.join(table_to_save)
-    #         f.write(table_to_save_string)
-
-    # except Exception as e:
-    #     print("Error:", e)
+    
     return result_dict
 
 
 ###############################################################################
-def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks):
-    global peak_list_entries, peak_labels, model_list, info_fit, time_stamp, formated_info, dialog
+def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks, update_model_list):
+    global peak_list_entries, peak_labels, info_fit, time_stamp, formated_info, dialog #model_list
     np_peaks = np.asarray(peaks, dtype='float64')
     x_peak = np_peaks[:, 0]
     y_peak = np_peaks[:, 1]
@@ -600,14 +544,18 @@ def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks):
     formated_info = "None"
     dialog = None
 
-    def on_closing():
-        """
-        Handles the closing event of the main window.
-        Performs necessary cleanup actions before closing the application.
-        """
-        main_window.quit()  # Quit the main window event loop
-        main_window.destroy()  # Destroy the main window
+    # def on_close():
+    #     """
+    #     Handles the closing event of the main window.
+    #     Performs necessary cleanup actions before closing the application.
+    #     """
+    #     global model_list
+    #     fit_window.quit()  # Quit the main window event loop
+    #     fit_window.destroy()  # Destroy the main window
+        
 
+
+        
     def field_creator(frame, position, peak, peak_label):
         """
        Creates and configures a set of UI elements for displaying and editing a peak.
@@ -621,7 +569,7 @@ def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks):
        Returns:
            None
        """
-        global peak_list_entries, peak_labels, model_list
+        global peak_list_entries, peak_labels#, model_list
 
         label = ttk.Label(
             frame,
@@ -656,10 +604,10 @@ def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks):
         label_model .grid(row=0, column=3, padx=5, pady=5)
 
         options = ['Not used', 'Gaussian', 'Lorentz',
-                   'Gauss-Lorentz', 'Voigt', 'Fano-Simply', 'Fano-Full']
+                   'Gauss-Lorentz','Voigt','Asy-BiGauss','Asy-BiLorentz','Asy-BiGauss-Lorentz','Asy-Sigmoidal-G-L','Asy-Pearson-IV','Fano-JAC', 'Fano-Simply', 'Fano-Voigt']
 
         combobox = ttk.Combobox(frame, values=options)
-        combobox.set(options[3])
+        combobox.set(options[4])
         model_list.append(combobox)
         combobox.grid(row=position+1, column=3, padx=5, pady=5)
 
@@ -674,11 +622,11 @@ def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks):
         global peak_list_entries, x_peak, y_peak, info_fit, time_stamp, formated_info
 
         # Extract peak positions and models from UI elements
-        peak_positions = [float(peak_list_entrie.get(
-        )) for peak_list_entrie in peak_list_entries if check_range_f(x, peak_list_entrie.get())]
+        peak_positions = [float(peak_list_entrie.get()) for peak_list_entrie in peak_list_entries
+                           if check_range_f(x, peak_list_entrie.get())]
         if len(peak_positions) == len(peak_list_entries):
             models = [model.get() for model in model_list]
-
+            update_model_list(models)
             # Find the index corresponding to each peak position
             index = [np.searchsorted(np.asarray(x, dtype='float64'), peak)
                      for peak in peak_positions]
@@ -738,20 +686,26 @@ def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks):
                                   peak_final_label[inner_iter])
                     inner_iter = inner_iter+1
                     # Get the integral:
-                    # Define the function to be integrated
+                    # Define the function to integrate
+                    def func(x):
+                        return Raman_fit.model_f(fitting.params, x, peak_info, new_model) - fitting.params['baseline'].value
 
-                    def f(x):
-                        return Raman_fit.model_f(fitting.params, x, peak_info, new_model)
-                    result, error = spi.quad(f, x[0], x[-1])
+                    # Compute the integral
+                    result, error = spi.quad(func, x[0], x[-1])  # replace 'a' and 'b' with the limits of integration
+                    print(f"baseline is {fitting.params['baseline'].value}")
+                    #result=np.trapz(Raman_fit.model_f(fitting.params, x, peak_info, new_model)-fitting.params['baseline'].value)
                     int_val.append(result)
                     # Extract the FWHM of the voight profile:
-
+            plots_to_show.append(np.array([x,[fitting.params['baseline'].value for item in x]], dtype='object'))
+            leyend.append("Baseline")
             # add the integrated intesity to dictionary:
 
             formated_info = expanded_dict(
                 formated_info, int_val, 'Integrated Intensity')
+            formated_info = expanded_dict(
+                formated_info, [r_2 for item in int_val], 'Pearson_coeff')
             # Add the FWHM if I have a voigt profile:
-            formated_info = voigt_fix_dic(formated_info)
+            formated_info = voigt_fix_dic(formated_info,models)
             # print(formated_info)
             # Update plot
             fig, ax = Raman_plot.plotter(plots_to_show,
@@ -770,10 +724,15 @@ def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks):
                 text_widget_2.insert(
                     "end", f"Peak {peak_number}:" + "\n", "bold")
                 for parameter, value in parameters.items():
-                    text_widget_2.insert(
-                        "end", f"{parameter}: {value}" + "\n", "bold")
-                text_widget_2.insert("end", "\n", "bold")
-
+                    # Convert value to string with 15 decimal places
+                    try:
+                        # Try to convert str_value to a float and format it in scientific notation
+                        num_value = float(value)
+                        text_widget_2.insert("end", f"{parameter}: {num_value:.6e}\n\n", "bold")
+                    except ValueError:
+                        # If str_value cannot be converted to a float, insert it as is
+                        text_widget_2.insert("end", f"{parameter}: {value}\n\n", "bold")
+                    
             # Activate fit info button
             button_fit_info.config(state="normal")
             button_fit_info_save.config(state="normal")
@@ -902,8 +861,23 @@ def create_fit_panel(main_window, canvas, canvas_panel, info, x, y, peaks):
         text_to_save = text_widget_2.get("1.0", "end-1c")
         save_text(text_to_save)
 
+    #####################################################################
+    ####                Create window for fitting:                    ###
+    #####################################################################
+    # Area to create the peak fittingwindow
+    fit_window = tk.Toplevel(main_window)
+    fit_window.title('Raman peak analizer')
+    fit_window.geometry("755x900")
+    fit_window.resizable(False, False)  # Disable resizing
+    fit_window.attributes("-topmost", True)
+    fit_window.protocol("WM_DELETE_WINDOW",lambda: on_popup_close(fit_window))
+
+    # Grid layout configuration
+    fit_window.grid_columnconfigure(0, weight=1)
+    fit_window.grid_rowconfigure(0, weight=1)
+
    # Creation of main panel elements
-    main_panel = tk.Frame(main_window, bg='white')
+    main_panel = tk.Frame(fit_window, bg='white')
     main_panel.grid(row=0, column=0, padx=10, pady=10, sticky='nsew')
 
     # Grid layout configuration

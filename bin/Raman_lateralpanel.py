@@ -28,7 +28,6 @@ import tkinter as tk
 from tkinter import ttk, filedialog
 from tkinter import messagebox
 import os
-from tqdm import tqdm
 import time
 
 from bin import Raman_dataloader
@@ -321,7 +320,7 @@ def on_popup_close(popup):
     popup.destroy()
 
 
-def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_dat_a, info_a, data_type):
+def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_dat_a, info_a, data_type, time_norm=1):
 
     # Global variables to the panel
     global raw_dat, x_raw, y_raw, x_baseline, y_baseline, spectral_window, info
@@ -332,6 +331,9 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
     global baseline_type
     global dict_container
     global new_peak_entry
+    global peak_finding_tab
+    global field_shift
+    global model_list
 
     raw_dat = raw_dat_a
     x_raw = raw_dat[:, 0]
@@ -354,6 +356,7 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
     normalise_check = False
     baseline_type = "Auto"
     dict_container={}
+    model_list=[]
 
     # Internal functions to clickbutton
 
@@ -400,7 +403,7 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
             lamb_value = float(field_lambda.get())
 
             raw_x, raw_y = data_clipper(raw_dat, spectral_window)
-            x, y = calc_baseline(raw_dat, spectral_window, lam=1e5*lamb_value)
+            x, y = calc_baseline(raw_dat, spectral_window, lam=1e4*lamb_value)
             dat = [[raw_x, raw_y], [x, y]]
             if silent:
                 fig, ax = Raman_plot.plotter(dat,
@@ -554,6 +557,7 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
             bas_man_points[-1] = [raw_dat[-1, 0], raw_dat[-1, 1]]
 
             update_baseline(raw_x, raw_y, bas_man_points, 'linear')
+            button_baseline.config(state="normal")
             button_substract_baseline.config(state="disabled")
             button_peak_detection.config(state="disabled")
             button_manual_peak_adding.config(state="disabled")
@@ -647,6 +651,43 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
         if c1 and c2:
             raw_x, raw_y = data_clipper(raw_dat, spectral_window)
             update_baseline(raw_x, raw_y, bas_man_points, model_type)
+
+    def button_shift_clicked(silent=True):
+        global x_baseline, y_baseline,field_low_k, field_upp_k, raw_dat, field_shift, baseline_type 
+        c1 = check_spectral_window(initial_spectral_window, [
+                                    field_low_k.get(), field_upp_k.get()])
+        c2 = float(field_shift.get())>-1e6 and float(field_shift.get())<1e6
+        if c1 and c2:
+            raw_x, raw_y = data_clipper(raw_dat, spectral_window)
+            x_baseline=raw_x
+            y_baseline=raw_y-float(field_shift.get())
+            baseline_type = "Shift"
+            if silent:
+                dat = [[raw_x, raw_y], [raw_x, [float(field_shift.get()) for item in raw_x]]]
+                
+                fig, ax = Raman_plot.plotter(dat,
+                                            ["Wavenumber (1/cm)",
+                                            "Intensity (A.U.)"],
+                                            info['Title'],
+                                            leyends=['Raw data', 'Baseline'],
+                                            lines=True,
+                                            res=150,
+                                            # size="double_size_double_heigh",
+                                            leyend_frame=[True, 'b'],
+                                            )
+                Raman_plot.update_plot(canvas, canvas_panel, fig, ax, dat)
+
+                button_substract_baseline.config(state="normal")
+                button_peak_detection.config(state="disabled")
+                button_manual_peak_adding.config(state="disabled")
+                button_peak_processing.config(state="disabled")
+                button_load_batch_folder.config(state="disabled")
+                button_batch.config(state="disabled")
+                button_dashboard.config(state="disabled")
+        else:
+            error("Please type a valid number [-1e6-1e6] and check the clipping window")
+
+
 
     def button_baseline_removed_clicked(silent=True):
         global x_baseline, y_baseline, info
@@ -901,57 +942,53 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
         secondary_window.protocol("WM_DELETE_WINDOW", on_closing)
         secondary_window.mainloop()
 
-    def button_peak_analizer_clicked():
-        global x_baseline, y_baseline, info, peak_value, peak_val
+    def update_model_list(new_model_list):
+        # This function updates model_list in the main window
+        global model_list
+        model_list = new_model_list
+        
 
-        def on_closing():
-            button_clipper.config(state="normal")
-            button_substract_baseline.config(state="normal")
-            button_baseline.config(state="normal")
-            button_peak_detection.config(state="normal")
-            button_peak_processing.config(state="normal")
-            button_peak_adding.config(state="normal")
-            button_normalise.config(state="normal")
-            button_load_batch_folder.config(state="normal")
-            button_batch.config(state="disabled")
-            fit_window.quit()
-            fit_window.destroy()
+    def button_peak_analizer_clicked():
+        global x_baseline, y_baseline, info, peak_value, peak_val,model_list
+
+        # def on_closing():
+        #     button_clipper.config(state="normal")
+        #     button_substract_baseline.config(state="normal")
+        #     button_baseline.config(state="normal")
+        #     button_peak_detection.config(state="normal")
+        #     button_peak_processing.config(state="normal")
+        #     button_peak_adding.config(state="normal")
+        #     button_normalise.config(state="normal")
+        #     button_load_batch_folder.config(state="normal")
+        #     button_batch.config(state="disabled")
+            
         # deactivate buttons
-        button_clipper.config(state="disabled")
-        button_baseline.config(state="disabled")
+        #button_clipper.config(state="disabled")
+        #button_baseline.config(state="disabled")
         button_substract_baseline.config(state="disabled")
         button_peak_detection.config(state="disabled")
         button_manual_peak_adding.config(state="disabled")
         button_peak_processing.config(state="disabled")
         button_peak_adding.config(state="disabled")
         button_normalise.config(state="disabled")
-        button_load_batch_folder.config(state="disabled")
+        #button_load_batch_folder.config(state="disabled")
         button_batch.config(state="disabled")
         button_dashboard.config(state="disabled")
 
 
-        # Create window for fitting:
-        # Area to create the peak fittingwindow
-        fit_window = tk.Toplevel(main_window)
-        fit_window.title('Raman peak analizer')
-        fit_window.geometry("755x900")
-        fit_window.resizable(False, False)  # Disable resizing
-        fit_window.attributes("-topmost", True)
-        # Grid layout configuration
-        fit_window.grid_columnconfigure(0, weight=1)
-        fit_window.grid_rowconfigure(0, weight=1)
+        
         Raman_single_peak_fit_GUI.create_fit_panel(
-            fit_window, canvas, canvas_panel, info, x_baseline, y_baseline, peak_val)
-
-        fit_window.protocol("WM_DELETE_WINDOW", on_closing)
-        fit_window.mainloop()
+            main_window, canvas, canvas_panel, info, x_baseline, y_baseline, peak_val,update_model_list)
+        
 
     def button_manual_adding_clicked():
         global peak_val, peaks, new_peak_entry  
+        button_load_batch_folder.config(state="normal")
+        button_peak_processing.config(state="normal")
         add_peak(new_peak_entry)
 
     def clean_peaks(event):
-        global peak_val, peaks, x_baseline, y_baseline, info  
+        global peak_val, peaks, x_baseline, y_baseline, info, selected_tab  
 
         if len(peak_val)>0:
             dat = [[x_baseline, y_baseline]]
@@ -970,67 +1007,73 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
                 canvas, canvas_panel, fig, ax, dat)
         peak_val=[]
         peaks=[]
+        
 
-    def button_load_batch_folder():
+    def load_batch_folder():
         """
         Opens a file dialog to select and load the data file.
         """
-        global valid_files
-
+        global valid_files,model_list        
         # Open the dialog to select a directory
         directory = filedialog.askdirectory()
 
         # Get a list of all files in the directory
-        files = os.listdir(directory)
+        try:
+            files = os.listdir(directory)
 
-        # Filter the list to only include .txt files
-        txt_files = [f for f in files if f.endswith('.txt')]
+            # Filter the list to only include .txt or datfiles
+            txt_files = [f for f in files if f.endswith('.txt') or f.endswith('.dat')]
 
-        # Create a new Tkinter window
-        root = tk.Tk()
-        root.title("Checking files Progress")
-           # Create a progress bar
-          # Create a label for the estimated time remaining
-        time_label = tk.Label(root, text="")
-        time_label.pack()
-        # Create a style for the progress bar
-        style = ttk.Style()
-        style.configure("TProgressbar", thickness=50)  # Adjust the thickness as needed
-        progress = ttk.Progressbar(root, length=250, mode='determinate', style="TProgressbar") 
-        progress.pack()
+            # Create a new Tkinter window
+            root = tk.Tk()
+            root.title("Checking files Progress")
+            # Create a progress bar
+            # Create a label for the estimated time remaining
+            time_label = tk.Label(root, text="")
+            time_label.pack()
+            # Create a style for the progress bar
+            style = ttk.Style()
+            style.configure("TProgressbar", thickness=50)  # Adjust the thickness as needed
+            progress = ttk.Progressbar(root, length=250, mode='determinate', style="TProgressbar") 
+            progress.pack()
 
-        # Valid data files
-        valid_files = []
-        numer_non_valid_files = 0
-        for item, file in enumerate(txt_files):
-            start_time = time.time()
-            try:
-                check = Raman_dataloader.load_spectra_data(
-                    os.path.join(directory, file), data_type, silent=False)
-                if len(check) > 0:
-                    valid_files.append(os.path.join(directory, file))
-                else:
+            # Valid data files
+            valid_files = []
+            numer_non_valid_files = 0
+            for item, file in enumerate(txt_files):
+                start_time = time.time()
+                try:
+                    check, key = Raman_dataloader.load_spectra_data(
+                        os.path.join(directory, file), data_type, silent=False)
+
+                    if key:
+                        valid_files.append(os.path.join(directory, file))
+                    else:
+                        numer_non_valid_files = numer_non_valid_files+1
+                except:
                     numer_non_valid_files = numer_non_valid_files+1
-            except:
-                numer_non_valid_files = numer_non_valid_files+1
-            
-            progress['value'] = (item+1) / len(txt_files) * 100
-            elapsed_time = time.time() - start_time
-            estimated_time = elapsed_time * (len(txt_files) - item)
-            
-            time_label['text'] = "{:.2f} % completed".format((item+1) / len(txt_files) * 100)+"\nEstimated time remaining:\n{:.2f} seconds".format(estimated_time)
-            root.update()
-            root.update_idletasks()
+                
+                progress['value'] = (item+1) / len(txt_files) * 100
+                elapsed_time = time.time() - start_time
+                estimated_time = elapsed_time * (len(txt_files) - item)
+                
+                time_label['text'] = "{:.2f} % completed".format((item+1) / len(txt_files) * 100)+"\nEstimated time remaining:\n{:.2f} seconds".format(estimated_time)
+                root.update()
+                root.update_idletasks()
 
-        # Close the Tkinter window once the loop is finished
-        root.destroy()
-        messagebox.showinfo("Information", f"{len(valid_files)} files valid to be processed,{numer_non_valid_files} files to be excluded", parent=main_window)
+            # Close the Tkinter window once the loop is finished
+            root.destroy()
+            messagebox.showinfo("Information", f"{len(valid_files)} files valid to be processed,{numer_non_valid_files} files to be excluded", parent=main_window)
 
-        if len(valid_files) > 0:
-            button_batch.config(state="normal")
+            if len(valid_files) > 0:
+                button_batch.config(state="normal")
+        except:
+            error("Select a valid Folder")
 
     def button_batch_proccesing():
-        global valid_files, normalise_check, raw_dat, info, bas_man_points, x_baseline, y_baseline,dict_container
+        global valid_files, normalise_check, raw_dat, info 
+        global bas_man_points, x_baseline, y_baseline,dict_container
+        global peak_finding_tab, peak_val, peaks, model_list
 
         new_x_baseline = [bas_man_points[i, 0]
                           for i in range(1, len(bas_man_points) - 1)]
@@ -1054,8 +1097,9 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
 
         for item,file in enumerate(valid_files):
             
-            raw_dat = Raman_dataloader.load_spectra_data(file, data_type)
-            info = Raman_dataloader.load_spectra_info(file, data_type)
+            raw_dat, key = Raman_dataloader.load_spectra_data(file, data_type)
+            raw_dat[:,1]=raw_dat[:,1]/time_norm
+            info, key2 = Raman_dataloader.load_spectra_info(file, data_type)
             plotShow = False  # False To not show the images
             start_time = time.time()
             if file == valid_files[-1]:
@@ -1065,6 +1109,8 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
                 try:
                     if baseline_type == "Auto":
                         button_baseline_clicked(silent=False)
+                    elif baseline_type == "Shift":
+                        button_shift_clicked(silent=False)
                     else:
                         raw_x, raw_y = data_clipper(raw_dat, spectral_window)
                         # Look for the datapoints in ech set of data:
@@ -1092,22 +1138,46 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
                         if normalise_check:
                             button_normalise_clicked(silent=False)
                         try:
-                            button_peak_detection_clicked(silent=False)
-                            try:
-                                dict_container.update(Raman_single_peak_fit_GUI.batch_fit(
-                                    canvas, canvas_panel, info, x_baseline, y_baseline, peak_val, file, silent=plotShow)
-                                )
-                                progress['value'] = (item+1) / len(valid_files) * 100                               
-                                elapsed_time = time.time() - start_time                                
-                                estimated_time = elapsed_time * (len(valid_files) - item)                                
-                                time_label['text'] = "{:.2f} % completed".format((item+1) / len(valid_files) * 100)+"\nEstimated time remaining:\n{:.2f} seconds".format(estimated_time)
+                            selected_tab = peak_finding_tab.tab(peak_finding_tab.select(), "text")
+                            if selected_tab=="Auto":
+                                button_peak_detection_clicked(silent=False)                            
+                                try:
+                                    dict_container.update(Raman_single_peak_fit_GUI.batch_fit(
+                                        canvas, canvas_panel, info, x_baseline, y_baseline, peak_val, file, silent=plotShow)
+                                    )
+                                    progress['value'] = (item+1) / len(valid_files) * 100                               
+                                    elapsed_time = time.time() - start_time                                
+                                    estimated_time = elapsed_time * (len(valid_files) - item)                                
+                                    time_label['text'] = "{:.2f} % completed".format((item+1) / len(valid_files) * 100)+"\nEstimated time remaining:\n{:.2f} seconds".format(estimated_time)
+                                    
                                 
-                            
-                                root2.update()
-                                root2.update_idletasks()
-                            except:
-                                messagebox.showinfo(
-                                    "Error", f"{file} \nFit routine failed")
+                                    root2.update()
+                                    root2.update_idletasks()
+                                except:
+                                    messagebox.showinfo(
+                                        "Error", f"{file} \nFit routine failed")
+                            else:
+                                peak_val= peak_val
+                                peaks=peaks
+
+                                try:
+                                    if len(model_list)>0:
+                                        dict_container.update(Raman_single_peak_fit_GUI.batch_fit(
+                                            canvas, canvas_panel, info, x_baseline, y_baseline, peak_val, file,models=model_list,silent=plotShow)
+                                        )
+                                        progress['value'] = (item+1) / len(valid_files) * 100                               
+                                        elapsed_time = time.time() - start_time                                
+                                        estimated_time = elapsed_time * (len(valid_files) - item)                                
+                                        time_label['text'] = "{:.2f} % completed".format((item+1) / len(valid_files) * 100)+"\nEstimated time remaining:\n{:.2f} seconds".format(estimated_time)
+                                    
+                                        root2.update()
+                                        root2.update_idletasks()
+                                    else:
+                                         messagebox.showinfo(
+                                        "Error", f"{file} \nFit first one spectra in folder to select the peak type")
+                                except:
+                                    messagebox.showinfo(
+                                        "Error", f"{file} \nFit routine failed")
                         except:
                             messagebox.showinfo(
                                 "Error", f"{file} \nPeak finding failed")
@@ -1134,11 +1204,11 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
         global dict_container
         dashboard_window = tk.Toplevel(main_window)
         dashboard_window.title('Batch peak analizer dahsboard')
-        dashboard_window.geometry("755x900")
+        dashboard_window.geometry("773x815")
         dashboard_window.resizable(False, False)  # Disable resizing
         Raman_single_peak_fit_dashboard.create_dashboard(dashboard_window, canvas, canvas_panel, dict_container)
      ###########################################################################
-     ##### Main laterla panel definition                                    ####
+     ##### Main lateral panel definition                                    ####
      ###########################################################################
 
     main_panel = tk.Frame(main_window, bg='white')
@@ -1182,18 +1252,31 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
 
     box_frame = ttk.Frame(subpanel1, borderwidth=1, relief="groove")
     box_frame.grid(row=1, column=0, padx=10, pady=2, sticky='nsew')
-
-    # First child frame
-    frame1 = ttk.Frame(box_frame, borderwidth=2, relief="groove")
-    frame1.grid(row=1, column=0, padx=10, pady=2)
-
-    # Second child frame
-    frame2 = ttk.Frame(box_frame, borderwidth=2, relief="groove")
-    frame2.grid(row=1, column=1, padx=10, pady=2)
-    # Configure column weights of the box_frame
+    
+      # Configure column weights of the box_frame
     box_frame.grid_columnconfigure(0, weight=1)
     box_frame.grid_columnconfigure(1, weight=1)
     # Add elements to each subpanel
+
+   
+    # Create the tabs 
+    range_tab = ttk.Notebook(box_frame)
+    range_tab.grid(row=0, column=0, padx=10, pady=2, sticky='nsew')
+    tab0 = ttk.Frame(range_tab)
+    tab01 = ttk.Frame(range_tab)
+    range_tab.add(tab0, text="Simple ROI")
+    range_tab.add(tab01, text="Segmented ROI")
+    
+    ### TAB0
+    
+     # First child frame
+    frame1 = ttk.Frame(tab0, borderwidth=2, relief="groove")
+    frame1.grid(row=1, column=0, padx=10, pady=2)
+
+    # Second child frame
+    frame2 = ttk.Frame(tab0, borderwidth=2, relief="groove")
+    frame2.grid(row=1, column=1, padx=10, pady=2)
+  
 
     # area to create the fields
     label_fields =  tk.Label(subpanel1, text="Select the spectral range:")
@@ -1233,9 +1316,13 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
     spectral_window[1] = float(field_upp_k.get())
     check_spectral_window(initial_spectral_window, spectral_window)
 
-    button_clipper = tk.Button(subpanel1, text='Clip data',
+    button_clipper = tk.Button(tab0, text='Clip data',
                                command=button_clipper_clicked)
-    button_clipper.grid(row=2, column=0, padx=10, pady=2)
+    button_clipper.grid(row=1, column=2, padx=10, pady=2)
+    
+    
+    ### TAB01
+    
 
     ###########################################################################
     ##### Sub panel 2                                                      ####
@@ -1269,8 +1356,10 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
     baseline_tab.grid(row=0, column=0, padx=10, pady=2, sticky='nsew')
     tab1 = ttk.Frame(baseline_tab)
     tab2 = ttk.Frame(baseline_tab)
+    tab2b = ttk.Frame(baseline_tab)
     baseline_tab.add(tab1, text="Auto")
     baseline_tab.add(tab2, text="Manual")
+    baseline_tab.add(tab2b, text="Shift")
 
     # First child frame
     frame3 = ttk.Frame(tab1, borderwidth=2, relief="groove")
@@ -1341,6 +1430,26 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
     button_baseline_res = tk.Button(tab2, text='Reset',
                                     command=button_man_baseline_reset)
     button_baseline_res.grid(row=2, column=2, padx=10, pady=2, sticky='nsew')
+
+    ###########################################################################
+    ##### Shift                                                            ####
+    ###########################################################################
+    shift_label = ttk.Label(
+        tab2b,
+        text="Vertical shift:",
+        anchor="center",
+        justify="center",
+        style="Box.TLabel"
+    )
+
+    shift_label.grid(row=0, column=0, padx=5, pady=2, sticky='nsew')
+    field_shift = ttk.Entry(tab2b, justify='center')
+    field_shift.insert(0, 0.0)
+    field_shift.grid(row=1, column=0, padx=5, pady=2, sticky='nsew')
+
+    button_shift = tk.Button(tab2b, text='Baseline',
+                                command=button_shift_clicked)
+    button_shift.grid(row=1, column=1, padx=10, pady=2, sticky='nsew')
 
     ###########################################################################
     ##### Common                                                           ####
@@ -1588,7 +1697,7 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
         row=0, column=0, padx=10, pady=2, sticky='e')
     # Create button in tab 4
     button_load_batch_folder = tk.Button(tab6, text='Load folder',
-                                         command=button_load_batch_folder,
+                                         command=load_batch_folder,
                                          state="disabled"
                                          )
     button_load_batch_folder.grid(

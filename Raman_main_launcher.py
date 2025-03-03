@@ -24,21 +24,29 @@ Created on Thu Jun 29 10:05:19 2023
 
 import tkinter as tk
 
-from tkinter import ttk
+from tkinter import Tk,ttk
 from PIL import ImageTk, Image
-import os
+from os import path
 from tendo import singleton
 import multiprocessing
 import sys
 
 from bin import Raman_single_GUI
 ############################################################
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = path.abspath(".")
 
+    return path.join(base_path, relative_path)
 
 def main_window():
     # Area to create the main window
-    window = tk.Tk()
-    window.title('Raman_Data_Processing_V6 JAC')
+    window = Tk()
+    window.title('Raman_Data_Processing_V1.0')
     window.geometry("500x500")
     window.resizable(False, False)  # Disable resizing
     window.attributes("-topmost", False)
@@ -90,11 +98,10 @@ def main_window():
         button_bg_4 = ImageTk.PhotoImage(image4)
 
     # Get the path to the image files
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    image1_path = os.path.join(current_dir, "Resources", "Icon2.PNG")
-    image2_path = os.path.join(current_dir, "Resources", "Icon3.PNG")
-    image3_path = os.path.join(current_dir, "Resources", "Icon4.PNG")
-    image4_path = os.path.join(current_dir, "Resources", "Icon5.PNG")
+    image1_path = resource_path("Resources/Icon2.PNG")
+    image2_path = resource_path("Resources/Icon3.PNG")
+    image3_path = resource_path("Resources/Icon4.PNG")
+    image4_path = resource_path("Resources/Icon5.PNG")
 
     # Load the images
     button_bg_1 = None

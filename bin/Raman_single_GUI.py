@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 """
-Spyder Editor
-
 This is a GUI to load and plot the data for a single peak analysis
 
 @author:  J.Anaya
@@ -28,7 +26,7 @@ This is a GUI to load and plot the data for a single peak analysis
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import tkinter as tk  # Import the Tkinter module for GUI
 from tkinter import ttk, filedialog, font
-import numpy as np
+import numpy as np#from numpy import arange
 from tkinter import messagebox
 import matplotlib.pyplot as plt
 import matplotlib
@@ -61,6 +59,16 @@ def check_key(dictionary, key):
     """
     return key in dictionary
 
+def error(text):
+    """
+    Display an error message based on the given type.
+
+    Args:
+        text (str): The message to show.
+
+
+    """
+    messagebox.showerror("Error", text)
 
 def main(window_parent):
     # Global variables:
@@ -82,27 +90,33 @@ def main(window_parent):
     selection_prev = 1
     # Area to create functions for GUI
 
-    def buttonCall(path):
+    def buttonCall(path,time):
         """
         Callback function for the button to load data.
 
         Parameters:
             path (str): The path to the data file.
         """
-        global graph_type, ax, fig, model_data
+        global ax, fig, model_data
         data_type = model_data.get()
-        x = Raman_dataloader.load_spectra_data(path, data_type)
-        info = Raman_dataloader.load_spectra_info(path, data_type)
+        try:
+            x, key = Raman_dataloader.load_spectra_data(path, data_type)
+            info, key = Raman_dataloader.load_spectra_info(path, data_type)
+            if key:
+                  dat = [[x[:, 0], x[:, 1]/time]]
+            fig, ax = Raman_plot.plotter(dat,
+                                        ["Wavenumber (1/cm)",
+                                        "Intensity (A.U.)"],
+                                        info['Title'],
+                                        leyends=['Raw data'],
+                                        res=150,
+                                        lines=True)
+            fig = Raman_plot.update_plot(canvas, canvas_panel, fig, ax, dat)
+            
+        except:
+            "key missing"
 
-        dat = [[x[:, 0], x[:, 1]]]
-        fig, ax = Raman_plot.plotter(dat,
-                                     ["Wavenumber (1/cm)",
-                                      "Intensity (A.U.)"],
-                                     info['Title'],
-                                     leyends=['Raw data'],
-                                     res=150,
-                                     lines=True)
-        fig = Raman_plot.update_plot(canvas, canvas_panel, fig, ax, dat)
+      
 
     def metadata(path, window):
         """
@@ -117,7 +131,7 @@ def main(window_parent):
         popup_window = tk.Toplevel(window)
         popup_window.title("Experiment metadata")
 
-        info = Raman_dataloader.load_spectra_info(path, data_type)
+        info, key = Raman_dataloader.load_spectra_info(path, data_type)
 
         text_widget = tk.Text(popup_window, padx=20, pady=5)
         text_widget.tag_configure("bold", font=("TkDefaultFont", 11, "bold"))
@@ -141,24 +155,52 @@ def main(window_parent):
         """
         Opens a file dialog to select and load the data file.
         """
-        global filepath, get_fields_data, variation_data, graph_type, ax, fig, model_data
+        global filepath, ax, fig, model_data
         data_type = model_data.get()
 
         filepath = filedialog.askopenfilename(
-            filetypes=[("TXT Files", "*.txt")])
+            filetypes=[("TXT Files", "*.txt"), ("Dat Files","*.dat")])
 
         if filepath != '':
-            # Call the buttonCall() function or perform any desired action
-            buttonCall(filepath)
-
             # Call the lateral panel:
             # default values for the global variables
-            raw_dat = Raman_dataloader.load_spectra_data(filepath, data_type)
-            info = Raman_dataloader.load_spectra_info(filepath, data_type)
-            lateral_panel = Raman_lateralpanel.create_lateral_panel(
-                canvas, canvas_panel, window, filepath, fig, raw_dat, info, data_type)
-            lateral_panel.grid(row=0, column=1, rowspan=1, sticky="nsew")
-            button_meta.config(state="normal")
+            buttonCall(filepath,1.0)
+            raw_dat, key = Raman_dataloader.load_spectra_data(filepath, data_type)
+            info, key2 = Raman_dataloader.load_spectra_info(filepath, data_type)
+            if key and key2:
+                # Call the buttonCall() function or perform any desired action
+              
+                lateral_panel = Raman_lateralpanel.create_lateral_panel(
+                    canvas, canvas_panel, window, filepath, fig, raw_dat, info, data_type)
+                lateral_panel.grid(row=0, column=1, rowspan=1, sticky="nsew")
+                button_meta.config(state="normal")
+                apply_button.config(state="normal")
+           
+    def apply_time():
+        global filepath,ax, fig, model_data
+        data_type = model_data.get()
+
+        try:
+            time=float(time_var.get())
+            if time <= 0:
+                raise ValueError("The input must be a number greater than 0")
+           
+            # Call the lateral panel:
+            # default values for the global variables
+            buttonCall(filepath,time)
+            raw_dat, key = Raman_dataloader.load_spectra_data(filepath, data_type)  
+                
+            raw_dat[:,1]=raw_dat[:,1]/time
+            info, key2 = Raman_dataloader.load_spectra_info(filepath, data_type)
+            if key and key2:
+                # Call the buttonCall() function or perform any desired action
+                
+                lateral_panel = Raman_lateralpanel.create_lateral_panel(
+                    canvas, canvas_panel, window, filepath, fig, raw_dat, info, data_type, time_norm=time)
+                lateral_panel.grid(row=0, column=1, rowspan=1, sticky="nsew")
+                button_meta.config(state="normal")
+        except:
+            error("Time must be positive and >0")
 
     def on_popup_close(popup):
         """
@@ -176,7 +218,7 @@ def main(window_parent):
 
     # Area to create the main window
     window = tk.Toplevel(window_parent)
-    window.title('Raman_Peak_Processing_V6 JAC')
+    window.title('Single_Raman_Peak_Processing_V1.0_JAC')
     window.geometry("1600x900")
 
     # minimize the launcher:
@@ -214,7 +256,7 @@ def main(window_parent):
     label_model = ttk.Label(button_panel, text="Select the data format:")
     label_model .grid(row=0, column=0, padx=5, pady=5)
 
-    options = ['Horiba', 'BWtech']
+    options = ['Horiba', 'B&Wtek', 'Brukker IR']
 
     combobox = ttk.Combobox(button_panel, values=options)
     combobox.set(options[0])
@@ -247,5 +289,18 @@ def main(window_parent):
                             state="disabled")
     button_meta.grid(row=0, column=3, padx=10, pady=5)
     # Remove the buttons from the window before using grid
+
+    # Create a StringVar to hold the time value
+    time_var = tk.StringVar()
+    time_var.set("1")  # Set the default time value to 1
+
+    # Create an Entry widget for the time input
+    time_label = tk.Label(button_panel, text="Enter adquisition time value (s):")
+    time_label.grid(row=0, column=4, padx=10, pady=5)
+    time_entry = tk.Entry(button_panel, textvariable=time_var)
+    time_entry.grid(row=0, column=5, padx=10, pady=5)
+
+    apply_button = tk.Button(button_panel, text="Apply", command=apply_time,state="disabled")
+    apply_button.grid(row=0, column=6, padx=10, pady=5)
 
     window.mainloop()
