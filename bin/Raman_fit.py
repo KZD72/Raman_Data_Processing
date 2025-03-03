@@ -28,7 +28,7 @@ import numpy as np
 from scipy.special import wofz
 import lmfit
 from lmfit import Parameters, Minimizer
-from bin import Raman_plot
+#from bin import Raman_plot
 
 
 
@@ -370,6 +370,7 @@ def fano_f_not_normalised(x, a_1=0, a_2=1,a_3=1, q=1e10):
 
 
     return unscaled
+
 def fano_f(x, a_1=0, a_2=1, a_3=1, q=1e10,baseline=0):
     """
     Calculate the Fano lineshape without Voigt
@@ -432,14 +433,14 @@ def voigt_fano_not_normalised(x, x0, g_FWHM, l_FWHM, q=0):
     voigt_imag = np.imag(faddeeva)# / sigma / np.sqrt(2 * np.pi)
 
     fano_par=q
+    unscaled = ((fano_par**2-1)*voigt_r+2*fano_par*voigt_imag)
+     # Scaling factor from Schippers' Eq. 2
+    scaling_factor = (2 * np.sqrt(np.log(2)) / (g_FWHM* np.sqrt(np.pi))) * np.abs(1/ (q**2 - 1))
+    scaled=unscaled* scaling_factor
+    return scaled
 
-    unscaled=-1*((fano_par**2-1)*voigt_r+2*fano_par*voigt_imag)
 
-
-    return unscaled
-
-
-def voigt_fano_f(x, x0, g_FWHM, l_FWHM, amplitude, q=0,baseline=0):
+def voigt_fano_f(x, x0, g_FWHM, l_FWHM, amplitude, q=100,baseline=0):
      """
      Calculate the normalised Voigt profile using the convolution of the Fano lineshape and a Gaussian.
 
@@ -455,20 +456,20 @@ def voigt_fano_f(x, x0, g_FWHM, l_FWHM, amplitude, q=0,baseline=0):
          array-like: The Voigt profile evaluated at x.
      """
      #Modify q to get the same value as normal
-     qq=-1/q
+     qq=q
      # Calculate the unnormalized Voigt function
-     voight_fano = voigt_fano_not_normalised(x, x0, g_FWHM, l_FWHM, qq)
+     voight_fano = amplitude*voigt_fano_not_normalised(x, x0, g_FWHM, l_FWHM, qq)
     
 
-     # Find the maximum value of the Voigt function at x0
-     max_value = np.maximum(np.max(voight_fano),1e-20)
+    #  # Find the maximum value of the Voigt function at x0
+    #  max_value = np.maximum(np.max(voight_fano),1e-20)
 
-     # Normalize the Voigt function by dividing by the maximum value
-     voigt_fano_normalized = voight_fano / max_value
+    #  # Normalize the Voigt function by dividing by the maximum value
+    #  voigt_fano_normalized = voight_fano / max_value
 
-     return baseline+voigt_fano_normalized*amplitude
+     return baseline+ voight_fano
 
-def voigt_fano_not_normalised_num(x, x0, g_FWHM, l_FWHM, q=0):
+def voigt_fano_not_normalised_num(x, x0, g_FWHM, l_FWHM, q=0, dx=0.1, padding_factor=2.0):
     """
     This function performs the convolution of a Gaussian and a Fano function.
     
@@ -482,25 +483,31 @@ def voigt_fano_not_normalised_num(x, x0, g_FWHM, l_FWHM, q=0):
     Returns:
     numpy array: The convolution of the Gaussian and Fano functions.
     """
+     # 1. Energy Grid Expansion
+    E_extended = np.arange(x[0] - padding_factor*np.ptp(x), 
+                           x[-1] + padding_factor*np.ptp(x), dx)
+
+    # 2. Generate Extended Fano Profile
+    epsilon = 2 * (E_extended - x0) / l_FWHM
+    term = ((q + epsilon)**2 / (1 + epsilon**2)) - 1
+    F_extended = np.abs(1 / (q**2 - 1)) * (2 / (l_FWHM * np.pi)) * term
     
-    # Generate the Gaussian function
-    gauss = np.array(gauss_f(x, x0, g_FWHM, 1))
+    # 3. Generate Extended Gaussian Kernel
+    delta_G = g_FWHM
+    sigma = delta_G / (2 * np.sqrt(2 * np.log(2)))
+    G_extended = (1 / (sigma * np.sqrt(2 * np.pi))) * np.exp(-(E_extended-x0)**2 / (2 * sigma**2))
     
-    # Generate the Fano function
-    fano = np.array(fano_f(x, x0, l_FWHM, 1, q))
-    
-    # Perform the convolution
-    full_convolution = np.convolve(gauss, fano, mode='same')#signal.convolve(gauss, fano, mode='same')
-    # Compute the start index for the 'same' mode
-    start_index = (full_convolution.size // 2) - (gauss.size // 2)
+    # 4. Numerical Convolution using FFT
+    C_extended = np.convolve(F_extended, G_extended, mode='same') * dx
 
-    # Extract the central part of the convolution that is the same size as the input
-    unscaled = full_convolution#[start_index : start_index + gauss.size]
+    # 5. Correct Cropping: Maintain Exact Length of x
+    crop_start = np.searchsorted(E_extended, x[0])
+    C_cropped = C_extended[crop_start:crop_start + len(x)]  # Ensure exact size
 
-    return unscaled
+    return C_cropped
 
 
-def voigt_fano_f_num(x, x0, g_FWHM, l_FWHM, amplitude, q=0, baseline=0):
+def voigt_fano_f_num(x, x0, g_FWHM, l_FWHM, amplitude, q=100, baseline=0):
      """
      Calculate the normalised Voigt profile using the convolution of the Fano lineshape and a Gaussian.
 
@@ -517,17 +524,17 @@ def voigt_fano_f_num(x, x0, g_FWHM, l_FWHM, amplitude, q=0, baseline=0):
          array-like: The Voigt profile evaluated at x.
      """
      #Modify q to get the same value as normal
-     qq=-1/q
+     qq=q
      # Calculate the unnormalized Voigt function
-     voight_fano = voigt_fano_not_normalised_num(x, x0, g_FWHM, l_FWHM, qq)
+     voight_fano = amplitude*voigt_fano_not_normalised_num(x, x0, g_FWHM, l_FWHM, qq)
       
-     # Find the maximum value of the Voigt function at x0
-     max_value = np.maximum(np.max(voight_fano),1e-20)
+    #  # Find the maximum value of the Voigt function at x0
+    #  max_value = np.maximum(np.max(voight_fano),1e-20)
 
-     # Normalize the Voigt function by dividing by the maximum value
-     voigt_fano_normalized = voight_fano/max_value
+    #  # Normalize the Voigt function by dividing by the maximum value
+    #  voigt_fano_normalized = voight_fano/max_value
 
-     return voigt_fano_normalized*amplitude+baseline
+     return voight_fano+baseline
  
  
 def fano_f_jac(x, x0=1, FWHM=1, Am=1,q=100, k=0,):
@@ -654,15 +661,6 @@ def model_f(params, x, peaks,model_type=None):
                                       params['Peak_'+str(item+1)+'_Fano_Asymmetry'],
                                       params['Peak_'+str(item+1)+'_Fano_baseline'])
                                      )
-            
-        elif model_type[item]=="Fano-JAC":
-            function_composed.append(fano_f_jac(x,
-                                      params['Peak_'+str(item+1)+'_Center'],
-                                      params['Peak_'+str(item+1)+'_Phonon_FWHM'],
-                                      params['Peak_'+str(item+1)+'_Intensity'],
-                                      params['Peak_'+str(item+1)+'_Fano_Asymmetry'],
-                                      params['Peak_'+str(item+1)+'_Fano_k'])
-                                     )
            
         elif model_type[item]=="Fano-Voigt":
             function_composed.append(voigt_fano_f(x,
@@ -671,8 +669,7 @@ def model_f(params, x, peaks,model_type=None):
                                       params['Peak_'+str(item+1)+'_Fano_FWHM'],
                                       params['Peak_'+str(item+1)+'_Intensity'],
                                       params['Peak_'+str(item+1)+'_Fano_Asymmetry'],
-                                      params['Peak_'+str(item+1)+'_Fano_baseline'],
-                                      )                                     
+                                      params['Peak_'+str(item+1)+'_Fano_baseline']                                      )                                     
                                      )
             
         # elif model_type[item]=="Fano-Voigt-num":
@@ -681,8 +678,18 @@ def model_f(params, x, peaks,model_type=None):
         #                                 params['Peak_'+str(item+1)+'_Gauss_FWHM'],
         #                                 params['Peak_'+str(item+1)+'_Fano_FWHM'],
         #                                 params['Peak_'+str(item+1)+'_Intensity'],
-        #                                 params['Peak_'+str(item+1)+'_Fano_Asymmetry'])
+        #                                 params['Peak_'+str(item+1)+'_Fano_Asymmetry'],
+        #                                 params['Peak_'+str(item+1)+'_Fano_baseline'])  
         #                                 )
+
+        elif model_type[item]=="Fano-JAC":
+            function_composed.append(fano_f_jac(x,
+                                      params['Peak_'+str(item+1)+'_Center'],
+                                      params['Peak_'+str(item+1)+'_Phonon_FWHM'],
+                                      params['Peak_'+str(item+1)+'_Intensity'],
+                                      params['Peak_'+str(item+1)+'_Fano_Asymmetry'],
+                                      params['Peak_'+str(item+1)+'_Fano_k'])
+                                     )
         elif model_type[item]=='Not used':
 
             f_0(x)
@@ -791,16 +798,17 @@ def params_f(peaks, model_type=None):
             params.add('Peak_'+str(item+1)+'_Gauss_FWHM', value=2,min=0.1)
             params.add('Peak_'+str(item+1)+'_Fano_FWHM', value=2,min=0.1)
             params.add('Peak_'+str(item+1)+'_Intensity', value=peaks[item][1],min=0.1,max=1e12)
-            params.add('Peak_'+str(item+1)+'_Fano_Asymmetry',   value=10,min=-1e12,max=1e12)
+            params.add('Peak_'+str(item+1)+'_Fano_Asymmetry',   value=1.3,min=-1e12,max=1e12)
             params.add('Peak_'+str(item+1)+'_Fano_baseline', value=0.001,min=0,max=1e6)
-            params.add('Peak_'+str(item+1)+'_Fano_baseline', value=0.001,min=0,max=1e10)
             baseline=False
+
         # elif model_type[item]=="Fano-Voigt-num":
         #     params.add('Peak_'+str(item+1)+'_Center', value=peaks[item][0],min=0)
         #     params.add('Peak_'+str(item+1)+'_Gauss_FWHM', value=2,min=0.1)
         #     params.add('Peak_'+str(item+1)+'_Fano_FWHM', value=2,min=0.1)
         #     params.add('Peak_'+str(item+1)+'_Intensity', value=peaks[item][1],min=0)
-        #     params.add('Peak_'+str(item+1)+'_Fano_Asymmetry',  value=0.001,min=-1e4,max=1e4)
+        #     params.add('Peak_'+str(item+1)+'_Fano_Asymmetry',  value=1.3,min=-1e4,max=1e4)
+        #     params.add('Peak_'+str(item+1)+'_Fano_baseline', value=0.001,min=0,max=1e6)
         elif model_type[item]=='Not used':
             print("not used")
         else:
@@ -870,28 +878,28 @@ def fit_info(fit):
 
 
 
-def test():
+# def test():
 
 
-    # Generate example data
-    x = np.linspace(0, 2000, 1000)
-    y =voigt_f(x, 500, 50,50,1)#-voigt_fano_f(x,500, 50,50,1, -1/5) #fano_f(x,40, 4, 1,1/8)+voigt_fano_f(x, 80, 4,4, 1,1/8) # True underlying function
+#     # Generate example data
+#     x = np.linspace(0, 2000, 1000)
+#     y =voigt_f(x, 500, 50,50,1)#-voigt_fano_f(x,500, 50,50,1, -1/5) #fano_f(x,40, 4, 1,1/8)+voigt_fano_f(x, 80, 4,4, 1,1/8) # True underlying function
 
-    peaks=[[500,10]]#,[60.5,40000],[80,40000]]
+#     peaks=[[500,10]]#,[60.5,40000],[80,40000]]
 
-    models=["Lorentz","Gaussian","Fano-Simply"]
-    fitting=fit(x,y,
-                peaks,
-                models)
-    print(lmfit.fit_report(fitting))
+#     models=["Lorentz","Gaussian","Fano-Simply"]
+#     fitting=fit(x,y,
+#                 peaks,
+#                 models)
+#     print(lmfit.fit_report(fitting))
 
-    new_y=model_f(fitting.params, x,peaks,models)
+#     new_y=model_f(fitting.params, x,peaks,models)
 
-    Raman_plot.plotter([[x,y],[x,new_y]],
-                   ['x','y'],
-                   'none',
-                   leyends=['raw','fit'],
-                    lines=True)
+#     Raman_plot.plotter([[x,y],[x,new_y]],
+#                    ['x','y'],
+#                    'none',
+#                    leyends=['raw','fit'],
+#                     lines=True)
 
 
 
@@ -902,3 +910,30 @@ def test():
 #test("Gauss-Lorentz")
 #test("Voigt")
 #test2()
+def test_fano_voigt():
+    # Parameters
+    import matplotlib.pyplot as plt
+    x0 = 520          # Resonance position (E_res)
+    l_FWHM = 3.0      # Lorentzian (Fano) FWHM (Δ_L)
+    g_FWHM = 0.1      # Gaussian FWHM (Δ_G)
+    q =100       # Fano asymmetry parameter
+    A = 10         # Amplitude parameter
+
+    # Energy grid
+    dx = 0.01
+    E = np.arange(x0 - 10, x0 + 10, dx)
+
+    C_analytical = voigt_fano_f(E, x0, g_FWHM, l_FWHM,A, q) 
+    C_numerical = voigt_fano_f_num(E, x0, g_FWHM, l_FWHM,A, q)
+
+    # 5. Plot results
+    plt.figure(figsize=(10, 6))
+    plt.plot(E, C_numerical, label='Numerical Convolution', linewidth=2)
+    plt.plot(E, C_analytical, '--', label='Analytical Solution', linewidth=2)
+    plt.xlabel('Energy')
+    plt.ylabel('Intensity')
+    plt.legend()
+    plt.title('Comparison of Numerical and Analytical Convolution')
+    plt.grid(True)
+    plt.show()
+#test_fano_voigt()
