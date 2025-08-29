@@ -320,7 +320,72 @@ def on_popup_close(popup):
     popup.destroy()
 
 
-def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_dat_a, info_a, data_type, time_norm=1):
+def set_buttons(state, *buttons):
+    """
+    Set the given buttons to 'normal' or 'disabled' in one go.
+    """
+    for btn in buttons:
+        try:
+            btn.config(state=state)
+        except KeyError:
+            pass
+
+def disable_all_buttons():
+    """
+    Disable every button in the lateral panel.
+    """
+    for name in (
+        'button_clipper', 'button_baseline', 'button_man_baseline', 'button_shift',
+        'button_substract_baseline', 'button_normalise', 'button_peak_detection',
+        'button_manual_peak_adding', 'button_peak_processing',
+        'button_load_batch_folder', 'button_batch', 'button_dashboard'
+    ):
+        try:
+            globals()[name].config(state='disabled')
+        except KeyError:
+            pass
+def clean_globals():
+    global raw_dat, x_raw, y_raw, x_baseline, y_baseline, spectral_window, info
+    global field_low_k, field_upp_k, initial_spectral_window, lamb_value
+    global peak_value, peak_val, smoothing_window, peak_sep, normalize_var, peak_number_control
+    global bas_man_points, point_baseline
+    global valid_files, normalise_check
+    global baseline_type
+    global dict_container
+    global new_peak_entry
+    global peak_finding_tab
+    global field_shift
+    global model_list
+
+    raw_dat = None
+    x_raw = None
+    y_raw = None
+    x_baseline = None
+    y_baseline = None
+    spectral_window = None
+    info = None
+    field_low_k = None
+    field_upp_k = None
+    initial_spectral_window = None
+    lamb_value = None
+    peak_value = None
+    peak_val = None
+    smoothing_window = None
+    peak_sep = None
+    normalize_var = None
+    peak_number_control = None
+    bas_man_points = None
+    point_baseline = None
+    valid_files = None
+    normalise_check = None
+    baseline_type = None
+    dict_container = None
+    new_peak_entry = None
+    peak_finding_tab = None
+    field_shift = None
+    model_list = None
+
+def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_dat_a, info_a, data_type, data_format='single', time_norm=1):
 
     # Global variables to the panel
     global raw_dat, x_raw, y_raw, x_baseline, y_baseline, spectral_window, info
@@ -335,6 +400,7 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
     global field_shift
     global model_list
 
+    clean_globals()
     raw_dat = raw_dat_a
     x_raw = raw_dat[:, 0]
     y_raw = raw_dat[:, 1]
@@ -382,13 +448,10 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
                                              leyend_frame=[True, 'b'],
                                              )
                 Raman_plot.update_plot(canvas, canvas_panel, fig, ax, dat)
+                disable_all_buttons()
+                set_buttons('normal',button_clipper,button_baseline)
 
-                button_substract_baseline.config(state="disabled")
-                button_peak_detection.config(state="disabled")
-                button_manual_peak_adding.config(state="disabled")
-                button_peak_processing.config(state="disabled")
-                button_load_batch_folder.config(state="disabled")
-                button_batch.config(state="disabled")
+    
 
     def button_baseline_clicked(silent=True):
         global x_baseline, y_baseline, info, field_low_k, field_upp_k, raw_dat, initial_spectral_window, lamb_value, baseline_type
@@ -420,13 +483,9 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
             x_baseline = x
             y_baseline = raw_y-y
             baseline_type = "Auto"
-            button_substract_baseline.config(state="normal")
-            button_peak_detection.config(state="disabled")
-            button_manual_peak_adding.config(state="disabled")
-            button_peak_processing.config(state="disabled")
-            button_load_batch_folder.config(state="disabled")
-            button_batch.config(state="disabled")
-            button_dashboard.config(state="disabled")
+            disable_all_buttons()
+            set_buttons('normal',button_clipper,button_baseline,button_substract_baseline)
+            
 
     def update_baseline(raw_x, raw_y, bas_man_points, model_type, silent=True):
         global x_baseline, y_baseline
@@ -523,13 +582,9 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
 
                 update_baseline(raw_x, raw_y, bas_man_points,
                                 model_type, silent)
-                button_substract_baseline.config(state="normal")
-                button_peak_detection.config(state="disabled")
-                button_manual_peak_adding.config(state="disabled")
-                button_peak_processing.config(state="disabled")
-                button_load_batch_folder.config(state="disabled")
-                button_batch.config(state="disabled")
-                button_dashboard.config(state="disabled")
+                disable_all_buttons()
+                set_buttons('normal',button_clipper,button_baseline,button_substract_baseline)
+                
             else:
                 gen_error(
                     f"Point out of data range [{spectral_window[0]}-{spectral_window[1]}]")
@@ -557,14 +612,9 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
             bas_man_points[-1] = [raw_dat[-1, 0], raw_dat[-1, 1]]
 
             update_baseline(raw_x, raw_y, bas_man_points, 'linear')
-            button_baseline.config(state="normal")
-            button_substract_baseline.config(state="disabled")
-            button_peak_detection.config(state="disabled")
-            button_manual_peak_adding.config(state="disabled")
-            button_peak_processing.config(state="disabled")
-            button_load_batch_folder.config(state="disabled")
-            button_batch.config(state="disabled")
-            button_dashboard.config(state="disabled")
+            disable_all_buttons()
+            set_buttons('normal',button_clipper,button_baseline)
+            
             
 
     def button_add_baseline():
@@ -620,12 +670,8 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
                 "There are non numerical values, or wrong format in the provided file")
 
         button_substract_baseline.config(state="normal")
-        button_peak_detection.config(state="disabled")
-        button_manual_peak_adding.config(state="disabled")
-        button_peak_processing.config(state="disabled")
-        button_load_batch_folder.config(state="disabled")
-        button_batch.config(state="disabled")
-        button_dashboard.config(state="disabled")
+        disable_all_buttons()
+        set_buttons('normal',button_clipper,button_baseline,button_substract_baseline)
 
     def button_save_baseline():
         global x_baseline, y_baseline, bas_man_points
@@ -677,13 +723,10 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
                                             )
                 Raman_plot.update_plot(canvas, canvas_panel, fig, ax, dat)
 
-                button_substract_baseline.config(state="normal")
-                button_peak_detection.config(state="disabled")
-                button_manual_peak_adding.config(state="disabled")
-                button_peak_processing.config(state="disabled")
-                button_load_batch_folder.config(state="disabled")
-                button_batch.config(state="disabled")
-                button_dashboard.config(state="disabled")
+             
+                disable_all_buttons()
+                set_buttons('normal',button_clipper,button_baseline,button_substract_baseline)
+                
         else:
             error("Please type a valid number [-1e6-1e6] and check the clipping window")
 
@@ -707,11 +750,11 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
             Raman_plot.update_plot(canvas, canvas_panel, fig, ax, dat)
         button_peak_detection.config(state="normal")
         button_manual_peak_adding.config(state="normal")
-        button_peak_processing.config(state="disabled")
-        button_normalise.config(state="normal")
-        button_load_batch_folder.config(state="disabled")
-        button_batch.config(state="disabled")
-        button_dashboard.config(state="disabled")
+        disable_all_buttons()
+        set_buttons('normal',button_clipper,button_baseline,button_substract_baseline, 
+                    button_peak_detection,button_manual_peak_adding,
+                    button_normalise)
+       
 
     def button_normalise_clicked(silent=True):
         global x_baseline, y_baseline, info, normalise_check
@@ -732,10 +775,11 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
                                          leyend_frame=[True, 'b'],
                                          )
             Raman_plot.update_plot(canvas, canvas_panel, fig, ax, dat)
-        button_peak_detection.config(state="normal")
-        button_peak_processing.config(state="disabled")
-        button_load_batch_folder.config(state="disabled")
-        button_batch.config(state="disabled")
+        disable_all_buttons()
+        set_buttons('normal',button_clipper,button_baseline,button_substract_baseline, 
+                    button_peak_detection,button_manual_peak_adding,
+                    button_normalise)
+    
 
     def button_peak_detection_clicked(silent=True):
         global x_baseline, y_baseline, info, peaks, peak_value, peak_val, smoothing_window, peak_sep, peak_promi, peak_number_control
@@ -786,10 +830,12 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
                                              arrow=arrow_data
                                              )
                 Raman_plot.update_plot(canvas, canvas_panel, fig, ax, dat)
-            button_peak_processing.config(state="normal")
-            button_peak_adding.config(state="normal")
-            button_load_batch_folder.config(state="normal")
-            button_batch.config(state="disabled")
+           
+            disable_all_buttons()
+            set_buttons('normal',button_clipper,button_baseline,button_substract_baseline, 
+                    button_peak_detection,button_manual_peak_adding,
+                    button_normalise,button_peak_processing,button_peak_adding)
+          
     
     
     def add_peak(new_peak):
@@ -870,24 +916,19 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
         global x_baseline, y_baseline, info, peak_val, peaks
 
         # deactivate buttons
-        button_clipper.config(state="disabled")
-        button_baseline.config(state="disabled")
-        button_substract_baseline.config(state="disabled")
-        button_peak_detection.config(state="disabled")
-        button_peak_processing.config(state="disabled")
-        button_peak_adding.config(state="disabled")
-        button_normalise.config(state="disabled")
-        button_batch.config(state="disabled")
-        button_dashboard.config(state="disabled")
+        disable_all_buttons()
+        set_buttons('normal',button_clipper,button_baseline,button_substract_baseline, 
+                    button_peak_detection,button_manual_peak_adding,
+                    button_normalise,button_peak_processing,button_peak_adding)
+          
+       
 
         def on_closing():
-            button_clipper.config(state="normal")
-            button_substract_baseline.config(state="normal")
-            button_baseline.config(state="normal")
-            button_peak_detection.config(state="normal")
-            button_peak_processing.config(state="normal")
-            button_peak_adding.config(state="normal")
-            button_normalise.config(state="normal")
+            disable_all_buttons()
+            set_buttons('normal',button_clipper,button_baseline,button_substract_baseline, 
+                    button_peak_detection,button_manual_peak_adding,
+                    button_normalise,button_peak_processing,button_peak_adding)
+           
             secondary_window.quit()
             secondary_window.destroy()
 
@@ -951,39 +992,30 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
     def button_peak_analizer_clicked():
         global x_baseline, y_baseline, info, peak_value, peak_val,model_list
 
-        # def on_closing():
-        #     button_clipper.config(state="normal")
-        #     button_substract_baseline.config(state="normal")
-        #     button_baseline.config(state="normal")
-        #     button_peak_detection.config(state="normal")
-        #     button_peak_processing.config(state="normal")
-        #     button_peak_adding.config(state="normal")
-        #     button_normalise.config(state="normal")
-        #     button_load_batch_folder.config(state="normal")
-        #     button_batch.config(state="disabled")
-            
-        # deactivate buttons
-        #button_clipper.config(state="disabled")
-        #button_baseline.config(state="disabled")
-        button_substract_baseline.config(state="disabled")
-        button_peak_detection.config(state="disabled")
-        button_manual_peak_adding.config(state="disabled")
-        button_peak_processing.config(state="disabled")
-        button_peak_adding.config(state="disabled")
-        button_normalise.config(state="disabled")
-        #button_load_batch_folder.config(state="disabled")
-        button_batch.config(state="disabled")
-        button_dashboard.config(state="disabled")
-
-
-        
+        disable_all_buttons()
+        if data_format=='single':
+            set_buttons('normal',button_clipper,button_baseline,button_substract_baseline, 
+                        button_peak_detection,button_manual_peak_adding,
+                        button_normalise,button_peak_processing,button_peak_adding,
+                        button_load_batch_folder
+                        )
+        else:    
+            set_buttons('normal',button_clipper,button_baseline,button_substract_baseline, 
+                        button_peak_detection,button_manual_peak_adding,
+                        button_normalise,button_peak_processing,button_peak_adding,button_map_processing
+                        
+                        )
+       
         Raman_single_peak_fit_GUI.create_fit_panel(
             main_window, canvas, canvas_panel, info, x_baseline, y_baseline, peak_val,update_model_list)
         
 
     def button_manual_adding_clicked():
         global peak_val, peaks, new_peak_entry  
-        button_load_batch_folder.config(state="normal")
+        try:
+            button_load_batch_folder.config(state="normal")
+        except:
+            print()
         button_peak_processing.config(state="normal")
         add_peak(new_peak_entry)
 
@@ -1066,7 +1098,12 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
             messagebox.showinfo("Information", f"{len(valid_files)} files valid to be processed,{numer_non_valid_files} files to be excluded", parent=main_window)
 
             if len(valid_files) > 0:
-                button_batch.config(state="normal")
+                disable_all_buttons()
+                set_buttons('normal',button_clipper,button_baseline,button_substract_baseline, 
+                    button_peak_detection,button_manual_peak_adding,
+                    button_normalise,button_peak_processing,button_peak_adding,
+                    button_load_batch_folder,button_batch
+                    )
         except:
             error("Select a valid Folder")
 
@@ -1197,7 +1234,13 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
 
         # Close the Tkinter window once the loop is finished
         root2.destroy()
-        button_dashboard.config(state="normal")
+        disable_all_buttons()
+        set_buttons('normal',button_clipper,button_baseline,button_substract_baseline, 
+                    button_peak_detection,button_manual_peak_adding,
+                    button_normalise,button_peak_processing,button_peak_adding,
+                    button_load_batch_folder,button_batch,button_dashboard
+                    )
+       
         
 
     def dashboard():
@@ -1207,6 +1250,109 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
         dashboard_window.geometry("773x815")
         dashboard_window.resizable(False, False)  # Disable resizing
         Raman_single_peak_fit_dashboard.create_dashboard(dashboard_window, canvas, canvas_panel, dict_container)
+
+
+    def process_map_batch_fit_from_file(filepath, data_type):
+        # 1) re‑load the map
+        metadata, wavenumbers, coords, intensities = Raman_dataloader.load_map_data(filepath, data_type)
+        # 2) now call your batch‑fit routine using coords/intensities:
+        process_map_batch_fit(coords, wavenumbers, intensities)
+
+    def process_map_batch_fit(coords, wavenumbers, intensities):
+        """
+        Batch‑fit every pixel in a Raman map using the same pipeline as button_batch_proccesing,
+        but in memory. Returns a dict: { "(x,y)": <full batch_fit dict> }.
+        """
+        global bas_man_points, baseline_type, lamb_value, normalise_check
+        global model_list, peak_val, peaks, peak_finding_tab
+        global time_norm, spectral_window, info, model_list
+        time_norm=1.0
+        dict_container = {}
+        # any manual‑baseline anchor points between the ends:
+        new_x_baseline = [bas_man_points[i,0] for i in range(1, len(bas_man_points)-1)]
+
+        # progress window (unchanged)
+        root2 = tk.Toplevel()
+        root2.title("Map processing")
+        time_label = tk.Label(root2, text="")
+        time_label.pack(pady=5)
+        style = ttk.Style(root2)
+        style.configure("TProgressbar", thickness=20)
+        progress = ttk.Progressbar(root2, length=300, mode='determinate', style="TProgressbar")
+        progress.pack(pady=5)
+
+        total = len(coords)
+        result_dict={}
+        for idx, (x0,y0) in enumerate(coords):
+            start = time.time()
+            key = f"({x0:.1f},{y0:.1f})"
+
+            # rebuild raw spectrum for this pixel
+            raw = Raman_dataloader.map_pixel_to_spectrum(
+                coords, intensities, wavenumbers, pixel_index=idx
+            )
+            raw[:,1] /= float(time_norm)
+
+            try:
+                # 1) clip → 2) baseline → 3) baseline removed → 4) normalize → 5) detect peaks
+                button_clipper_clicked(silent=False)
+                if   baseline_type=="Auto":   button_baseline_clicked(silent=False)
+                elif baseline_type=="Shift":  button_shift_clicked(silent=False)
+                else:
+                    rx, ry = data_clipper(raw, spectral_window)
+                    pts = np.zeros((2,2))
+                    pts[0] = [rx[0], ry[0]];  pts[-1] = [rx[-1], ry[-1]]
+                    res = abs((rx[0]-rx[1])/4)
+                    for p in new_x_baseline:
+                        i = Raman_datahandling.wavenumber_to_index(rx, p, res)
+                        pts = np.insert(pts,
+                                        np.searchsorted(pts[:,0], rx[i]),
+                                        [[rx[i], ry[i]]],
+                                        axis=0)
+                    update_baseline(rx, ry, pts, str(baseline_model.get()), silent=False)
+
+                button_baseline_removed_clicked(silent=False)
+                if normalise_check:
+                    button_normalise_clicked(silent=False)
+
+                # 5) peak detect & fit
+                selected = peak_finding_tab.tab(peak_finding_tab.select(), "text")
+                if selected == "Auto":
+                    button_peak_detection_clicked(silent=False)
+                    result_dict.update(Raman_single_peak_fit_GUI.batch_fit(
+                        canvas, canvas_panel, info,
+                        x_baseline, y_baseline, peak_val,
+                        key, silent=False
+                    ))
+                    
+                else:
+                    if not model_list:
+                        raise RuntimeError("No models defined – please run a single fit first.")
+                    result_dict.update(Raman_single_peak_fit_GUI.batch_fit(
+                        canvas, canvas_panel, info,
+                        x_baseline, y_baseline, peak_val,
+                        key, models=model_list, silent=False
+                    ))
+                    
+
+                # store the full dict under your coordinate key
+                only_key = next(iter(result_dict))
+
+                dict_container[key] = result_dict[only_key]
+                print(dict_container[key]['fit_results'])
+            except Exception as e:
+                dict_container[key] = {"error": str(e)}
+
+            # update progress/ETA
+            progress['value'] = (idx+1)/total*100
+            elapsed = time.time() - start
+            eta = elapsed*(total-idx-1)
+            time_label.config(text=f"{progress['value']:.1f}% — ETA {eta:.1f}s")
+            root2.update_idletasks()
+
+        root2.destroy()
+        return dict_container
+
      ###########################################################################
      ##### Main lateral panel definition                                    ####
      ###########################################################################
@@ -1677,40 +1823,61 @@ def create_lateral_panel(canvas, canvas_panel, main_window, path, figure, raw_da
       
     # Buttons subpanel4
     # Create a style
-   
-    style.configure('TNotebook.Tab', 
-                font=('Helvetica', 12, 'bold'))  # Bold font with size 18
-    fit_tab = ttk.Notebook(frame9)
-    fit_tab.grid(row=0, column=0, padx=10, pady=2, sticky='nsew')
-    tab5 = ttk.Frame(fit_tab)
-    tab6 = ttk.Frame(fit_tab)
-    fit_tab.add(tab5, text="Single peak processing")
-    fit_tab.add(tab6, text="Batch proceesing")
-    tab5.grid_columnconfigure(0, weight=1)
-    tab6.grid_columnconfigure(0, weight=1)
-    # Create button in tab 3
- 
-    button_peak_processing = tk.Button(tab5, text='Peak fitting menu',
-                                       command=button_peak_analizer_clicked,
-                                       state="disabled")
-    button_peak_processing.grid(
-        row=0, column=0, padx=10, pady=2, sticky='e')
-    # Create button in tab 4
-    button_load_batch_folder = tk.Button(tab6, text='Load folder',
-                                         command=load_batch_folder,
-                                         state="disabled"
-                                         )
-    button_load_batch_folder.grid(
-        row=0, column=0, padx=10, pady=2, sticky='nsew')
+    button_peak_processing = tk.Button()
+    if data_format=='single':
+        style.configure('TNotebook.Tab', 
+                    font=('Helvetica', 12, 'bold'))  # Bold font with size 18
+        fit_tab = ttk.Notebook(frame9)
+        fit_tab.grid(row=0, column=0, padx=10, pady=2, sticky='nsew')
+        tab5 = ttk.Frame(fit_tab)
+        tab6 = ttk.Frame(fit_tab)
+        fit_tab.add(tab5, text="Single peak processing")
+        fit_tab.add(tab6, text="Batch proceesing")
+        tab5.grid_columnconfigure(0, weight=1)
+        tab6.grid_columnconfigure(0, weight=1)
+        # Create button in tab 3
+    
+        button_peak_processing = tk.Button(tab5, text='Peak fitting menu',
+                                        command=button_peak_analizer_clicked,
+                                        state="disabled")
+        button_peak_processing.grid(
+            row=0, column=0, padx=10, pady=2, sticky='e')
+        # Create button in tab 4
+        button_load_batch_folder = tk.Button(tab6, text='Load folder',
+                                            command=load_batch_folder,
+                                            state="disabled"
+                                            )
+        button_load_batch_folder.grid(
+            row=0, column=0, padx=10, pady=2, sticky='nsew')
 
-    button_batch = tk.Button(tab6, text='Batch processing',
-                             command=button_batch_proccesing,
-                             state="disabled")
-    button_batch.grid(row=0, column=1, padx=10, pady=2, sticky='e')
+        button_batch = tk.Button(tab6, text='Batch processing',
+                                command=button_batch_proccesing,
+                                state="disabled")
+        button_batch.grid(row=0, column=1, padx=10, pady=2, sticky='e')
 
-    button_dashboard = tk.Button(tab6, text='Summary Dashboard',
-                             command=dashboard,
-                             state="disabled")
-    button_dashboard.grid(row=1, column=1, padx=10, pady=2, sticky='e')
+        button_dashboard = tk.Button(tab6, text='Summary Dashboard',
+                                command=dashboard,
+                                state="disabled")
+        button_dashboard.grid(row=1, column=1, padx=10, pady=2, sticky='e')
+    
+    if data_format=='Map':
+        
+        
+        # Create button in tab 3
+    
+        button_peak_processing = tk.Button(frame9, text='Peak fitting menu',
+                                        command=button_peak_analizer_clicked,
+                                        state="disabled")
+        button_peak_processing.grid(
+            row=0, column=0, padx=10, pady=2, sticky='e')
+       
+        button_map_processing = tk.Button(frame9, text='Map processing',
+                                            command=lambda: process_map_batch_fit_from_file(path, data_type),
+                                            state="disabled"
+                                            )
+        button_map_processing.grid(
+            row=1, column=0, padx=10, pady=2, sticky='nsew')
+
+        
 
     return main_panel

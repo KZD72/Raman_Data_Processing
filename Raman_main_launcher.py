@@ -31,7 +31,7 @@ from tendo import singleton
 import multiprocessing
 import sys
 
-from bin import Raman_single_GUI
+from bin import Raman_single_GUI, Raman_map_GUI
 ############################################################
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
@@ -74,7 +74,7 @@ def main_window():
         Raman_single_GUI.main(window)
 
     def launch_program2():
-        print("disabled")
+        Raman_map_GUI.main(window)
 
     def launch_program3():
         print("disabled")
@@ -131,7 +131,7 @@ def main_window():
     button1.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
 
     button2 = ttk.Button(
-        button_frame, text="", command=launch_program2, compound="center", state="disabled")
+        button_frame, text="", command=launch_program2, compound="center")
     button2.image = button_bg_2  # Store the image object as an attribute
     button2.config(image=button2.image)
     button2.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")

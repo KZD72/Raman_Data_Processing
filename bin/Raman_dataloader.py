@@ -509,8 +509,106 @@ def save_text(text_to_save):
             f.write(text_to_save)
 
 
+def load_map_data(path, data_type='Horiba'):
+    """
+    Load a Raman map from a text file.
 
+    Parameters:
+        path (str): Path to the .txt map file.
 
+    Returns:
+        metadata (dict): All header key/value pairs.
+        wavenumbers (np.ndarray): 1D array of length n_pts with the spectral axis.
+        coords (np.ndarray): (n_pixels, 2) array with X and Y coords.
+        intensities (np.ndarray): (n_pixels, n_pts) array of counts per pixel.
+
+    Raises:
+        ValueError: If any row’s intensity count doesn’t match the axis length,
+                    or if the set of (X,Y) does not form a full rectangular grid.
+    """
+    metadata = {}
+    wavenumbers = None
+    coords = []
+    intensities = []
+
+    # read all lines
+    with open(path, 'r', encoding='utf-8', errors='replace') as f:
+        lines = f.readlines()
+
+    # parse header (#key=val) until first non-# line
+    data_start = None
+    for i, line in enumerate(lines):
+        if line.startswith('#'):
+            parts = line[1:].split('=', 1)
+            if len(parts) == 2:
+                key, val = parts
+                metadata[key.strip()] = val.strip()
+        else:
+            # this is the wavenumber axis
+            # try tab‑sep first, then space
+            row = line.strip()
+            wavenumbers = np.fromstring(row, sep='\t')
+            if wavenumbers.size == 0:
+                wavenumbers = np.fromstring(row, sep=' ')
+            if wavenumbers.size == 0:
+                raise ValueError("Could not parse spectral axis line.")
+            data_start = i + 1
+            break
+
+    if wavenumbers is None:
+        raise ValueError("No spectral axis found in file.")
+
+    # parse each subsequent pixel line: X, Y, intensities...
+    for line in lines[data_start:]:
+        row = line.strip()
+        if not row:
+            continue
+        parts = row.split()
+        if len(parts) < 3:
+            continue
+        x = robust_float(parts[0])
+        y = robust_float(parts[1])
+        vals = np.array([robust_float(v) for v in parts[2:]], dtype=float)
+        if vals.size != wavenumbers.size:
+            raise ValueError(f"Pixel @ ({x},{y}) has {vals.size} bins, expected {wavenumbers.size}")
+        coords.append((x, y))
+        intensities.append(vals)
+
+    coords = np.array(coords, dtype=float)
+    intensities = np.vstack(intensities)
+
+    # check for complete rectangular grid
+    xs = np.unique(coords[:, 0])
+    ys = np.unique(coords[:, 1])
+    expected = xs.size * ys.size
+    if coords.shape[0] != expected:
+        raise ValueError(f"Grid mismatch: got {coords.shape[0]} points but expected {xs.size}×{ys.size}={expected}")
+
+    return metadata, wavenumbers, coords, intensities
+
+def map_pixel_to_spectrum(coords, intensities, wavenumbers, pixel_index=0):
+    """
+    Extract one pixel’s spectrum from a previously loaded map and
+    return it as an (n_pts × 2) array [wavenumber, intensity] just like
+    load_spectra_data_horiba.
+
+    Parameters:
+        coords (ndarray): (n_pixels, 2) array of X,Y positions.
+        intensities (ndarray): (n_pixels, n_pts) array of counts.
+        wavenumbers (ndarray): (n_pts,) array of spectral axis.
+        pixel_index (int): which pixel to pull (default 0 = first).
+
+    Returns:
+        spectrum (ndarray): (n_pts, 2) array, first column wavenumber,
+                            second column intensity, sorted ascending.
+    """
+    # get the intensity row
+    counts = intensities[pixel_index]
+    # stack into shape (n_pts,2)
+    data = np.vstack([wavenumbers, counts]).T
+    # reorder to ascending first column
+
+    return reorder_data(data)
 
 def test():
     path=r"D:\OneDrive - UVa\Program_devs\RamanSpectra\Dev_0\Test data\PCLS_22_1_20 s_785nm_Edge_600 (500nm)_100x_200 µm_2% (0_78mW)_01.txt"
